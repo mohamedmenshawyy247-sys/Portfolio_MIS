@@ -3,6 +3,7 @@ import { adminFieldUpdate, adminOnly, isAdmin } from '../lib/access'
 
 export const Users: CollectionConfig = {
   slug: 'users',
+  labels: { singular: { en: 'User', ar: 'مستخدم' }, plural: { en: 'Users', ar: 'المستخدمون' } },
   auth: {
     tokenExpiration: 60 * 60 * 8,
     maxLoginAttempts: 5,
@@ -21,15 +22,16 @@ export const Users: CollectionConfig = {
     unlock: adminOnly,
   },
   fields: [
-    { name: 'displayName', type: 'text', required: true, maxLength: 100 },
+    { name: 'displayName', type: 'text', label: { en: 'Display name', ar: 'الاسم المعروض' }, required: true, maxLength: 100 },
     {
       name: 'role',
       type: 'select',
+      label: { en: 'Role', ar: 'الدور' },
       required: true,
       defaultValue: 'editor',
       options: [
-        { label: 'Admin', value: 'admin' },
-        { label: 'Editor', value: 'editor' },
+        { label: { en: 'Admin', ar: 'مدير' }, value: 'admin' },
+        { label: { en: 'Editor', ar: 'محرر' }, value: 'editor' },
       ],
       // Non-admins cannot change roles: Payload silently discards the field, so an editor
       // sending role=admin keeps their existing role.

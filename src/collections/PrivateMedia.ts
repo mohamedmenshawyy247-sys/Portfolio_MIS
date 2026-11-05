@@ -9,6 +9,7 @@ import { IMAGE_UPLOADS, VIDEO_UPLOADS, validateUploadedFile } from '../lib/uploa
  */
 export const PrivateMedia: CollectionConfig = {
   slug: 'private-media',
+  labels: { singular: { en: 'Private media', ar: 'وسائط خاصة' }, plural: { en: 'Private media', ar: 'الوسائط الخاصة' } },
   upload: {
     staticDir: 'private-media',
     mimeTypes: [...Object.keys(IMAGE_UPLOADS), ...Object.keys(VIDEO_UPLOADS)],
@@ -20,5 +21,5 @@ export const PrivateMedia: CollectionConfig = {
   access: { read: staffOnly, create: staffOnly, update: staffOnly, delete: adminOnly },
   admin: { useAsTitle: 'description' },
   hooks: { beforeValidate: [validateUploadedFile({ ...IMAGE_UPLOADS, ...VIDEO_UPLOADS })] },
-  fields: [{ name: 'description', type: 'text', required: true, maxLength: 200 }],
+  fields: [{ name: 'description', type: 'text', label: { en: 'Description', ar: 'الوصف' }, required: true, maxLength: 200 }],
 }

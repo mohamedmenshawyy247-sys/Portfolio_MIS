@@ -41,6 +41,7 @@ const projectIntegrityRules: CollectionBeforeChangeHook = ({ data }) => {
 
 export const Projects: CollectionConfig = {
   slug: 'projects',
+  labels: { singular: { en: 'Project', ar: 'مشروع' }, plural: { en: 'Projects', ar: 'المشاريع' } },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'visibility', 'reviewStatus', '_status'],
@@ -70,55 +71,79 @@ export const Projects: CollectionConfig = {
     {
       name: 'slug',
       type: 'text',
+      label: { en: 'Slug', ar: 'المعرّف في الرابط' },
       unique: true,
       required: true,
       index: true,
       validate: (val: unknown) => (typeof val === 'string' && SLUG.test(val)) || 'Use lowercase a-z, digits and hyphens',
-      admin: { description: 'Shared by both languages. Changing it changes the public URL.' },
+      admin: {
+        description: {
+          en: 'Shared by both languages. Changing it changes the public URL.',
+          ar: 'مشترك بين اللغتين. تغييره يغيّر الرابط العام.',
+        },
+      },
     },
-    { name: 'title', type: 'text', localized: true, required: true, maxLength: 150 },
-    { name: 'summary', type: 'textarea', localized: true, required: true, maxLength: 300 },
-    { name: 'challenge', type: 'textarea', localized: true, required: true, maxLength: 3000 },
-    { name: 'solution', type: 'textarea', localized: true, required: true, maxLength: 3000 },
+    { name: 'title', type: 'text', label: { en: 'Title', ar: 'العنوان' }, localized: true, required: true, maxLength: 150 },
+    { name: 'summary', type: 'textarea', label: { en: 'Summary', ar: 'الملخص' }, localized: true, required: true, maxLength: 300 },
+    { name: 'challenge', type: 'textarea', label: { en: 'Challenge', ar: 'التحدي' }, localized: true, required: true, maxLength: 3000 },
+    { name: 'solution', type: 'textarea', label: { en: 'Solution', ar: 'الحل' }, localized: true, required: true, maxLength: 3000 },
     {
       name: 'deliveredValue',
       type: 'array',
+      label: { en: 'Delivered value', ar: 'القيمة المحققة' },
+      labels: { singular: { en: 'Item', ar: 'عنصر' }, plural: { en: 'Items', ar: 'عناصر' } },
       localized: true,
       maxRows: 8,
-      fields: [{ name: 'text', type: 'text', required: true, maxLength: 200 }],
-      admin: { description: 'Qualitative capabilities only. No invented KPIs or percentages.' },
+      fields: [{ name: 'text', type: 'text', label: { en: 'Text', ar: 'النص' }, required: true, maxLength: 200 }],
+      admin: {
+        description: {
+          en: 'Qualitative capabilities only. No invented KPIs or percentages.',
+          ar: 'قدرات نوعية فقط، دون مؤشرات أداء أو نسب مئوية مختلقة.',
+        },
+      },
     },
-    { name: 'service', type: 'relationship', relationTo: 'services', required: true },
+    { name: 'service', type: 'relationship', label: { en: 'Service', ar: 'الخدمة' }, relationTo: 'services', required: true },
     {
       name: 'visibility',
       type: 'select',
+      label: { en: 'Visibility', ar: 'الظهور' },
       required: true,
       defaultValue: 'private',
       options: [
-        { label: 'Public (listed and indexable)', value: 'public' },
-        { label: 'Unlisted (reachable by exact link, not listed, noindex)', value: 'unlisted' },
-        { label: 'Private (staff only)', value: 'private' },
+        { label: { en: 'Public (listed and indexable)', ar: 'عام (مدرج وقابل للفهرسة)' }, value: 'public' },
+        {
+          label: { en: 'Unlisted (reachable by exact link, not listed, noindex)', ar: 'غير مدرج (يُفتح بالرابط المباشر فقط، لا يظهر في القوائم، بدون فهرسة)' },
+          value: 'unlisted',
+        },
+        { label: { en: 'Private (staff only)', ar: 'خاص (للموظفين فقط)' }, value: 'private' },
       ],
     },
-    { name: 'featured', type: 'checkbox', defaultValue: false },
-    { name: 'order', type: 'number', defaultValue: 0 },
+    { name: 'featured', type: 'checkbox', label: { en: 'Featured', ar: 'مميز' }, defaultValue: false },
+    { name: 'order', type: 'number', label: { en: 'Order', ar: 'الترتيب' }, defaultValue: 0 },
     {
       name: 'reviewStatus',
       type: 'select',
+      label: { en: 'Review status', ar: 'حالة المراجعة' },
       defaultValue: 'draft',
       options: [
-        { label: 'Draft', value: 'draft' },
-        { label: 'In review', value: 'in-review' },
-        { label: 'Changes requested', value: 'changes-requested' },
-        { label: 'Approved', value: 'approved' },
+        { label: { en: 'Draft', ar: 'مسودة' }, value: 'draft' },
+        { label: { en: 'In review', ar: 'قيد المراجعة' }, value: 'in-review' },
+        { label: { en: 'Changes requested', ar: 'مطلوب تعديلات' }, value: 'changes-requested' },
+        { label: { en: 'Approved', ar: 'معتمد' }, value: 'approved' },
       ],
-      admin: { description: 'Editors request review; admins approve and publish.' },
+      admin: {
+        description: {
+          en: 'Editors request review; admins approve and publish.',
+          ar: 'يطلب المحررون المراجعة، ويعتمد المديرون وينشرون.',
+        },
+      },
     },
-    { name: 'cover', type: 'upload', relationTo: 'public-media' },
-    { name: 'publicGallery', type: 'upload', relationTo: 'public-media', hasMany: true },
+    { name: 'cover', type: 'upload', label: { en: 'Cover image', ar: 'صورة الغلاف' }, relationTo: 'public-media' },
+    { name: 'publicGallery', type: 'upload', label: { en: 'Public gallery', ar: 'المعرض العام' }, relationTo: 'public-media', hasMany: true },
     {
       name: 'privateGallery',
       type: 'upload',
+      label: { en: 'Private gallery', ar: 'المعرض الخاص' },
       relationTo: 'private-media',
       hasMany: true,
       access: { read: staffFieldRead },
@@ -127,15 +152,27 @@ export const Projects: CollectionConfig = {
         val.length === 0 ||
         (siblingData as { visibility?: string } | undefined)?.visibility === 'private' ||
         'Private gallery is only allowed on private projects',
+      admin: {
+        description: {
+          en: 'Staff-only media; allowed on private projects only.',
+          ar: 'وسائط للموظفين فقط؛ مسموح بها في المشاريع الخاصة فقط.',
+        },
+      },
     },
     {
       name: 'demoURL',
       type: 'text',
+      label: { en: 'Demo URL', ar: 'رابط العرض التجريبي' },
       access: { read: staffFieldRead },
       validate: httpsOrEmpty,
-      admin: { description: 'Staff-only until demo access is approved; never expose internal endpoints publicly.' },
+      admin: {
+        description: {
+          en: 'Staff-only until demo access is approved; never expose internal endpoints publicly.',
+          ar: 'للموظفين فقط حتى تتم الموافقة على إتاحة العرض التجريبي؛ لا تكشف نقاط النهاية الداخلية للعامة أبدًا.',
+        },
+      },
     },
-    { name: 'seoTitle', type: 'text', localized: true, maxLength: 70 },
-    { name: 'seoDescription', type: 'textarea', localized: true, maxLength: 160 },
+    { name: 'seoTitle', type: 'text', label: { en: 'SEO title', ar: 'عنوان SEO' }, localized: true, maxLength: 70 },
+    { name: 'seoDescription', type: 'textarea', label: { en: 'SEO description', ar: 'وصف SEO' }, localized: true, maxLength: 160 },
   ],
 }

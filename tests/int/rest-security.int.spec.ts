@@ -150,6 +150,14 @@ describe('adversarial review regressions', () => {
     expect(good.headers.get('location') ?? '').toMatch(/\/ar\/projects\?x=1$/)
   })
 
+  it('system routes are never redirect targets, even percent-encoded or via dot segments', async () => {
+    for (const bad of ['/admin', '/%61dmin', '/Admin/collections', '/en/../api/users/me', '/_next/static/x', '/exit-preview?path=/x', '/%zz']) {
+      const res = await api(`/exit-preview?path=${encodeURIComponent(bad)}`)
+      expect([302, 307]).toContain(res.status)
+      expect(res.headers.get('location') ?? '', bad).toMatch(/^(\/|http:\/\/localhost:3000\/)$/)
+    }
+  })
+
   it('homepage drafts are never served to visitors, even with ?draft=true', async () => {
     const saved = await api('/api/globals/homepage?draft=true&locale=en', { method: 'POST', session: editor, body: { _status: 'draft', sections: [{ blockType: 'hero', headline: 'LEAKED-DRAFT-MARKER' }] } })
     expect(saved.status).toBe(200)

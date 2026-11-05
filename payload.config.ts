@@ -27,6 +27,8 @@ export default buildConfig({
   }),
   admin: {
     user: 'users',
+    // Built-in avatar: Payload's default 'gravatar' breaks offline/behind a proxy and would send e-mail hashes to gravatar.com.
+    avatar: 'default',
     meta: { titleSuffix: ' | MIS Department' },
   },
   // Admin UI available in English and Arabic (Payload switches to RTL automatically for Arabic).

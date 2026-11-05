@@ -17,6 +17,14 @@ export function safeInternalPath(candidate: string | null | undefined): null | s
     return null
   }
   if (parsed.origin !== 'http://internal.invalid' || parsed.username || parsed.password) return null
-  if (/^\/(api|admin|preview|exit-preview|_next)(\/|$)/.test(parsed.pathname)) return null
+  // Next.js routes on the decoded path, so the system-route check must look at the decoded form too
+  // (`/%61dmin` is `/admin`). Malformed escapes are refused outright.
+  let decodedPath: string
+  try {
+    decodedPath = decodeURIComponent(parsed.pathname)
+  } catch {
+    return null
+  }
+  if (/^\/(api|admin|preview|exit-preview|_next)(\/|$)/i.test(decodedPath)) return null
   return `${parsed.pathname}${parsed.search}`
 }

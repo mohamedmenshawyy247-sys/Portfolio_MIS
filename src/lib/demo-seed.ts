@@ -62,11 +62,12 @@ async function seedProjects(payload: Payload, services: Map<string, number>) {
 async function seedHomepage(payload: Payload) {
   const current = await payload.findGlobal({ slug: 'homepage', overrideAccess: true, draft: true, depth: 0 })
   if (Array.isArray(current.sections) && current.sections.length > 0) return
+  // A hero headline may mark one `**accent**` span, rendered with the cyan gradient (see HomeBlocks.renderHeadline).
   const sections: Sections = [
-      { blockType: 'hero', eyebrow: 'MIS DEPARTMENT · DIGITAL EXPERIENCE', headline: 'Operational Intelligence That Drives Decisions.', subline: 'We turn complex operational data into clear visibility, consistent quality and informed decisions.', primaryLabel: 'Explore Projects', secondaryLabel: 'Our Services' },
+      { blockType: 'hero', eyebrow: 'MIS DEPARTMENT · DIGITAL EXPERIENCE', headline: 'Operational **Intelligence** That Drives Decisions.', subline: 'We turn complex operational data into clear visibility, consistent quality and informed decisions.', primaryLabel: 'Explore Projects', secondaryLabel: 'Our Services' },
       { blockType: 'introduction', heading: 'The technology backbone for operational excellence.', text: 'Our work brings together monitoring, quality and advanced reporting to turn operational complexity into a clearer way forward.' },
       { blockType: 'servicesSection', heading: 'Our core services.', intro: 'Three connected capabilities that bring insight, confidence and control to operations.' },
-      { blockType: 'featuredProjects', heading: 'Featured projects.', intro: 'A visual look at our solutions and the thinking behind them.', limit: 1 },
+      { blockType: 'featuredProjects', heading: 'Featured projects.', intro: 'A visual look at our solutions and the thinking behind them.', limit: 3 },
       { blockType: 'approach', heading: 'From data to direction.', intro: 'An intentional journey from scattered signals to useful operational insight.', steps: [
         { title: 'Collect', detail: 'Operational signals' }, { title: 'Validate', detail: 'Reliable inputs' }, { title: 'Analyze', detail: 'Meaningful patterns' }, { title: 'Present', detail: 'Clear experiences' }, { title: 'Improve', detail: 'Informed action' } ] },
       { blockType: 'impactSection', heading: 'Our impact, without the noise.', intro: 'We focus on the operational capabilities a solution enables, not on invented performance numbers.', items: [
@@ -75,7 +76,7 @@ async function seedHomepage(payload: Payload) {
   ]
   const en = { sections }
   const ar: Record<string, Record<string, unknown>> = {
-    hero: { eyebrow: 'قسم MIS · تجربة رقمية', headline: 'ذكاء تشغيلي برؤية أوضح وقرارات أقوى.', subline: 'نحوّل البيانات التشغيلية المعقدة إلى رؤية واضحة وجودة مستمرة وقرارات مدروسة.', primaryLabel: 'استكشف المشاريع', secondaryLabel: 'خدماتنا' },
+    hero: { eyebrow: 'قسم MIS · تجربة رقمية', headline: '**ذكاء تشغيلي** برؤية أوضح وقرارات أقوى.', subline: 'نحوّل البيانات التشغيلية المعقدة إلى رؤية واضحة وجودة مستمرة وقرارات مدروسة.', primaryLabel: 'استكشف المشاريع', secondaryLabel: 'خدماتنا' },
     introduction: { heading: 'القوة التقنية وراء التميز التشغيلي.', text: 'نربط المراقبة اللحظية والجودة والتقارير المتقدمة لتحويل تحديات التشغيل إلى خطوات واضحة.' },
     servicesSection: { heading: 'خدماتنا الأساسية.', intro: 'ثلاث قدرات مترابطة تمنح العمليات رؤية وثقة وتحكمًا أفضل.' },
     featuredProjects: { heading: 'مشاريع مميزة.', intro: 'نظرة بصرية على الحلول وطريقة التفكير وراء كل مشروع.' },

@@ -18,7 +18,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ local
   const viewer = await getViewer()
   const [site, projects, services] = await Promise.all([getSiteInfo(locale), getProjects(locale, viewer), getServices(locale, viewer)])
   const filters = services.map((s) => ({ key: s.key, label: s.title }))
-  const cards: ProjectCard[] = projects.map(({ slug, category, title, summary, cover, status, visibility }) => ({ slug, category, title, summary, cover, status, visibility }))
+  const cards: ProjectCard[] = projects.map(({ slug, category, categoryLabel, title, summary, cover, status, visibility }) => ({ slug, category, categoryLabel, title, summary, cover, status, visibility }))
   return (
     <SiteShell locale={locale} active="projects" pathSuffix="projects" preview={viewer.draft} site={site}>
       <section className="page-hero"><div className="container"><div className="eyebrow bright">{c.projects}</div><h1>{c.projectsTitle}</h1><p>{c.projectsIntro}</p></div></section>

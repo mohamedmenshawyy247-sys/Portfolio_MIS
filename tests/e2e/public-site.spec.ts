@@ -22,7 +22,12 @@ for (const locale of LOCALES) {
         const summary = page.locator('details.mobile-menu summary')
         await expect(summary).toBeVisible()
         await summary.click()
-        await expect(page.locator('details.mobile-menu nav a').first()).toBeVisible()
+        const firstLink = page.locator('details.mobile-menu nav a').first()
+        await expect(firstLink).toBeVisible()
+        // One open-menu capture per locale; the full-page capture below is taken with the menu closed so the hero stays visible.
+        if (width === 390) await page.screenshot({ path: shot(`home-${locale}-390-menu-open`), fullPage: true })
+        await summary.click()
+        await expect(firstLink).toBeHidden()
       } else {
         await expect(page.locator('nav.primary-nav a').first()).toBeVisible()
       }

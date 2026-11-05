@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { SiteShell } from '@/components/SiteShell'
+import { ServiceIcon, SiteShell } from '@/components/SiteShell'
 import { getServices, getSiteInfo, type Locale } from '@/lib/catalog'
 import { copy } from '@/lib/copy'
 import { getViewer } from '@/lib/viewer'
@@ -24,7 +24,7 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
           <div className="service-grid">
             {services.map((s) => (
               <article className="service-card" key={s.id}>
-                <div className="service-icon" aria-hidden="true">✦</div><h3>{s.title}</h3><p>{s.summary}</p>
+                <div className="service-icon" aria-hidden="true"><ServiceIcon icon={s.icon} /></div><h3>{s.title}</h3><p>{s.summary}</p>
                 {s.points.length > 0 && <ul className="feature-list">{s.points.map((p) => <li key={p}>{p}</li>)}</ul>}
               </article>
             ))}

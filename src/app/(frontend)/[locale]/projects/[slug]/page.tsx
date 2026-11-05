@@ -35,7 +35,7 @@ export default async function CasePage({ params }: Params) {
     <SiteShell locale={locale} active="projects" pathSuffix={`projects/${p.slug}`} preview={viewer.draft} site={site}>
       <section className="page-hero">
         <div className="container">
-          <div className="eyebrow bright">{c.case} · {p.category}</div>
+          <div className="eyebrow bright">{p.categoryLabel ? `${c.case} · ${p.categoryLabel}` : c.case}</div>
           {viewer.draft && <StatusBadges locale={locale} status={p.status} visibility={p.visibility} />}
           <h1>{p.title}</h1>
           <p>{p.summary}</p>
@@ -46,8 +46,8 @@ export default async function CasePage({ params }: Params) {
         <div className="container">
           <figure className="cover-figure"><CoverImage media={p.cover} priority sizes="(max-width: 1100px) 100vw, 1100px" />{p.cover?.alt && <figcaption>{p.cover.alt}</figcaption>}</figure>
           <div className="details-grid">
-            <article className="content-card"><div className="eyebrow">{c.challenge}</div><h2>{c.challenge}</h2><p>{p.challenge}</p></article>
-            <article className="content-card"><div className="eyebrow">{c.solution}</div><h2>{c.solution}</h2><p>{p.solution}</p></article>
+            <article className="content-card"><div className="eyebrow">{c.challengeEyebrow}</div><h2>{c.challenge}</h2><p>{p.challenge}</p></article>
+            <article className="content-card"><div className="eyebrow">{c.solutionEyebrow}</div><h2>{c.solution}</h2><p>{p.solution}</p></article>
           </div>
           {p.gallery.length > 0 && (
             <>

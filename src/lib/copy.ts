@@ -15,6 +15,10 @@ const en = {
   previewMode: 'Preview mode: you are viewing draft content as signed-in staff.', exitPreview: 'Exit preview',
   draftBadge: 'Draft', unlistedBadge: 'Unlisted', privateBadge: 'Private',
   skip: 'Skip to content', menu: 'Menu', language: 'Language', mainNav: 'Main navigation',
+  exploreService: 'Explore service', aboutCta: 'About the department',
+  challengeEyebrow: '01 · Context', solutionEyebrow: '02 · Solution',
+  featuredCarousel: 'Featured projects', carousel: 'carousel', slide: 'slide', previousProject: 'Previous project', nextProject: 'Next project',
+  slideOf: (n: number, total: number) => `Slide ${n} of ${total}`,
 }
 const ar: typeof en = {
   tagline: 'ذكاء تشغيلي وأثر واضح.',
@@ -32,5 +36,9 @@ const ar: typeof en = {
   previewMode: 'وضع المعاينة: أنت تشاهد محتوى مسودة كموظف مسجّل الدخول.', exitPreview: 'إنهاء المعاينة',
   draftBadge: 'مسودة', unlistedBadge: 'غير مدرج', privateBadge: 'خاص',
   skip: 'تخطي إلى المحتوى', menu: 'القائمة', language: 'اللغة', mainNav: 'التنقل الرئيسي',
+  exploreService: 'استكشف الخدمة', aboutCta: 'تعرّف على القسم',
+  challengeEyebrow: '01 · السياق', solutionEyebrow: '02 · الحل',
+  featuredCarousel: 'المشاريع المميزة', carousel: 'عرض شرائح', slide: 'شريحة', previousProject: 'المشروع السابق', nextProject: 'المشروع التالي',
+  slideOf: (n: number, total: number) => `الشريحة ${n} من ${total}`,
 }
 export const copy = (locale: Locale) => (locale === 'ar' ? ar : en)

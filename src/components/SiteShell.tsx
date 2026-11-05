@@ -112,3 +112,20 @@ export function StatusBadges({ locale, status, visibility }: { locale: Locale; s
   if (badges.length === 0) return null
   return <span className="badge-row">{badges.map((b) => <span className="badge" key={b}>{b}</span>)}</span>
 }
+
+const iconProps = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
+
+/** Inline icon for a service's icon key (activity / shield / chart); the generic "✦" glyph for anything else. Decorative only. */
+export function ServiceIcon({ icon, size = 22 }: { icon: string; size?: number }) {
+  const props = { ...iconProps, width: size, height: size, 'aria-hidden': true as const }
+  switch (icon) {
+    case 'activity':
+      return <svg {...props}><path d="M3 12h4l3-7 4 14 3-7h4" /></svg>
+    case 'shield':
+      return <svg {...props}><path d="M12 3 4 6.5v5c0 4.6 3.4 8.6 8 9.5 4.6-.9 8-4.9 8-9.5v-5L12 3Z" /><path d="m9 12 2 2 4-4" /></svg>
+    case 'chart':
+      return <svg {...props}><path d="M3 20h18" /><rect x="5" y="12" width="3" height="6" /><rect x="10.5" y="8" width="3" height="10" /><rect x="16" y="4" width="3" height="14" /></svg>
+    default:
+      return <span aria-hidden="true">✦</span>
+  }
+}

@@ -7,7 +7,8 @@ describe('public site', () => {
   it('serves both locales with the right direction and CMS homepage blocks', async () => {
     const en = await (await get('/en')).text()
     expect(en).toContain('<html lang="en" dir="ltr">')
-    expect(en).toContain('Operational Intelligence That Drives Decisions.')
+    // The accent span is presentation only; the sentence must still read as one headline.
+    expect(en).toMatch(/Operational (<span class="accent">)?Intelligence(<\/span>)? That Drives Decisions\./)
     expect(en).toContain('Collect')
     const ar = await (await get('/ar')).text()
     expect(ar).toContain('<html lang="ar" dir="rtl">')

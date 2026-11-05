@@ -9,6 +9,7 @@ import { IMAGE_UPLOADS, VIDEO_UPLOADS, validateUploadedFile } from '../lib/uploa
  */
 export const PublicMedia: CollectionConfig = {
   slug: 'public-media',
+  labels: { singular: { en: 'Public media', ar: 'وسائط عامة' }, plural: { en: 'Public media', ar: 'الوسائط العامة' } },
   upload: {
     staticDir: 'public/media',
     mimeTypes: [...Object.keys(IMAGE_UPLOADS), ...Object.keys(VIDEO_UPLOADS)],
@@ -30,13 +31,19 @@ export const PublicMedia: CollectionConfig = {
   },
   hooks: { beforeValidate: [validateUploadedFile({ ...IMAGE_UPLOADS, ...VIDEO_UPLOADS })] },
   fields: [
-    { name: 'alt', type: 'text', localized: true, required: true, maxLength: 200 },
-    { name: 'caption', type: 'textarea', localized: true, maxLength: 300 },
+    { name: 'alt', type: 'text', label: { en: 'Alt text', ar: 'النص البديل' }, localized: true, required: true, maxLength: 200 },
+    { name: 'caption', type: 'textarea', label: { en: 'Caption', ar: 'التعليق' }, localized: true, maxLength: 300 },
     {
       name: 'approvedForPublic',
       type: 'checkbox',
+      label: { en: 'Approved for public use', ar: 'معتمد للعرض العام' },
       defaultValue: false,
-      admin: { description: 'Unapproved assets are never served to visitors or rendered on public pages.' },
+      admin: {
+        description: {
+          en: 'Unapproved assets are never served to visitors or rendered on public pages.',
+          ar: 'الأصول غير المعتمدة لا تُقدَّم للزوار ولا تُعرض في الصفحات العامة أبدًا.',
+        },
+      },
     },
   ],
 }

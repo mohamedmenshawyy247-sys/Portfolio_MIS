@@ -10,6 +10,7 @@ export type MediaRef = { alt: string; height: null | number; url: string; width:
 export type PortfolioService = { icon: string; id: string; key: string; points: string[]; summary: string; title: string }
 export type PortfolioProject = {
   category: string
+  categoryLabel: string
   challenge: string
   cover: MediaRef | null
   featured: boolean
@@ -135,7 +136,7 @@ type ProjectRow = {
 
 async function mapProjects(rows: ProjectRow[], locale: Locale, viewer: Viewer): Promise<PortfolioProject[]> {
   const services = await getServices(locale, viewer)
-  const keys = new Map(services.map((s) => [s.id, s.key]))
+  const byId = new Map(services.map((s) => [s.id, s]))
   const mediaIds = new Set<string>()
   for (const row of rows) {
     const cover = relId(row.cover)
@@ -147,8 +148,9 @@ async function mapProjects(rows: ProjectRow[], locale: Locale, viewer: Viewer): 
     const visibility = x.visibility === 'public' || x.visibility === 'unlisted' || x.visibility === 'private' ? x.visibility : 'private'
     const coverId = relId(x.cover)
     const gallery = Array.isArray(x.publicGallery) ? x.publicGallery.map((g) => media.get(relId(g) ?? '') ?? null).filter((m): m is MediaRef => m !== null) : []
+    const service = byId.get(relId(x.service) ?? '')
     return {
-      id: String(x.id), slug: txt(x.slug), category: keys.get(relId(x.service) ?? '') ?? '',
+      id: String(x.id), slug: txt(x.slug), category: service?.key ?? '', categoryLabel: service?.title ?? '',
       title: txt(x.title), summary: txt(x.summary), challenge: txt(x.challenge), solution: txt(x.solution),
       value: textList(x.deliveredValue), featured: Boolean(x.featured), visibility,
       status: x._status === 'published' ? 'published' : 'draft',
@@ -158,12 +160,14 @@ async function mapProjects(rows: ProjectRow[], locale: Locale, viewer: Viewer): 
   })
 }
 
-const demoProjects = (locale: Locale): PortfolioProject[] =>
-  demo.projects.filter((x) => x.visibility === 'public').map((x) => ({
-    id: x.slug, slug: x.slug, category: x.category, title: x.title[locale], summary: x.summary[locale], challenge: x.challenge[locale],
-    solution: x.solution[locale], value: [...x.value[locale]], featured: x.featured, visibility: 'public', status: 'published',
+const demoProjects = (locale: Locale): PortfolioProject[] => {
+  const titles = new Map(demo.services.map((s) => [s.id, s.title[locale]]))
+  return demo.projects.filter((x) => x.visibility === 'public').map((x) => ({
+    id: x.slug, slug: x.slug, category: x.category, categoryLabel: titles.get(x.category) ?? '', title: x.title[locale], summary: x.summary[locale],
+    challenge: x.challenge[locale], solution: x.solution[locale], value: [...x.value[locale]], featured: x.featured, visibility: 'public', status: 'published',
     cover: null, gallery: [], seoTitle: '', seoDescription: '',
   }))
+}
 
 /** Listed projects: public + published for everyone; staff in preview also see drafts and other visibilities. */
 export async function getProjects(locale: Locale, viewer: Viewer = anonymousViewer): Promise<PortfolioProject[]> {

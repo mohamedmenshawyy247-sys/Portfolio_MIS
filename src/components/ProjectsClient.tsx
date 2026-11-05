@@ -9,7 +9,10 @@ type Filter = { key: string; label: string }
 
 /** The subset of a project that the gallery card renders; nothing else reaches the client. */
 export type ProjectCard = {
+  /** Service key, used only for filtering. */
   category: string
+  /** Localized service title shown on the card. */
+  categoryLabel: string
   cover: MediaRef | null
   slug: string
   status: 'draft' | 'published'
@@ -44,7 +47,7 @@ export default function ProjectsClient({ locale, projects, filters, showBadges =
           <Link key={p.slug} href={`/${locale}/projects/${p.slug}`} className="gallery-card">
             <div className="gallery-thumb"><CoverImage media={p.cover} sizes="(max-width: 860px) 100vw, 33vw" /></div>
             <div className="gallery-content">
-              <span className="category-tag">{p.category}</span>
+              {p.categoryLabel && <span className="category-tag">{p.categoryLabel}</span>}
               {showBadges && <StatusBadges locale={locale} status={p.status} visibility={p.visibility} />}
               <h3>{p.title}</h3><p>{p.summary}</p><span className="text-link">{c.case}</span>
             </div>
