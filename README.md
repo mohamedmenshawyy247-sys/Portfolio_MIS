@@ -1,76 +1,99 @@
-# MIS Department Portfolio — Phase 1 & 2 Starter
+# MIS Department Portfolio
 
-> **Status:** Implemented source starter + **static showcase (browser QA pending)**. The live Payload CMS/PostgreSQL application is **not yet runtime-verified or deployed**. All included projects and values are **illustrative**; no client names, data, KPIs or private links should be published without approval.
+Bilingual (English / Arabic, full RTL) executive portfolio for the MIS Department: Real-Time
+Monitoring & Operations, Quality & Performance Management, Dashboards & Advanced Reporting.
 
-## Project objective
+> **Status (2026-11-05):** Phase 1 static preview and the Phase 2 **Next.js 16.4 + Payload 3.93 + PostgreSQL**
+> foundation are implemented and verified locally: clean build, committed migrations, seeded bilingual
+> demo content, and automated security/integration/browser tests. **Nothing is deployed.** All content is
+> illustrative (`DEMO_ONLY`); no client names, KPIs or private media. See `PHASE_1_2_REPORT.md` for evidence
+> and open items.
 
-An executive-grade MIS Department portfolio presenting Real-Time Monitoring & Operations, Quality & Performance Management, and Dashboards & Advanced Reporting through bilingual (English/Arabic) pages, cinematic project previews, case studies and a content-admin workflow.
+## Two deliverables in one repository
 
-## What is available now
-
-| Feature | GitHub Pages preview (`/docs`) | Next.js + Payload source |
+| | GitHub Pages preview (`docs/`) | Next.js + Payload application (`src/`, `payload.config.ts`) |
 | --- | --- | --- |
-| Responsive branded website | **Yes**: source prepared; browser QA pending | Source prepared; requires package install/build |
-| English + Arabic / RTL | **Yes** | Source implemented |
-| Home / Services / Projects / Case Studies / Impact | **Yes** (Home includes About, Services and Impact sections) | Source implemented as five routes plus case details |
-| Project search & filters | **Yes** | Source implemented |
-| Motion | Lightweight CSS + intersection effects, reduced-motion support | Base styles prepared; GSAP/R3F deep motion reserved for Phase 3 |
-| Admin CMS | **Design-only page**; no authentication or editing | Payload config + collections + Admin routes scaffolded; needs runtime validation |
-| PostgreSQL | No (static hosts cannot execute a database) | Configured but **not connected or tested** |
-| Private media | No private media in static preview | Collection with staff-only access scaffolded; validate before uploading any sensitive files |
-| Contact inbox / SMTP | Not active | Lead schema only; public submission intentionally disabled |
-| Deployment | GitHub Actions Pages workflow included | Hosting and production deployment postponed |
+| Purpose | Share the approved look and demo content with no hosting cost | The real, editable site and CMS (needs Node + PostgreSQL) |
+| Content | `content/demo-content.json`, synced to `docs/data/content.json` | PostgreSQL, edited in `/admin` |
+| Admin | `docs/admin-demo.html` is a **design-only mock**: no login, nothing is saved | Payload admin with roles, drafts, review and preview |
+| Runs on | Any static host | Node.js 24, PostgreSQL 16 |
 
-## Fastest way to show your website using GitHub Pages
+GitHub Pages cannot run Payload or PostgreSQL. The static preview is a demo, not a CMS.
 
-1. **Review `/docs` carefully; it contains only dummy content.** Do not add confidential customer data to this public preview.
-2. Push the contents of this starter **into the `Portfolio_MIS` GitHub repository** on a dedicated branch, then create a Pull Request into `main`. The repo currently has only an experimental `Test` file; do not overwrite/remove other files without reviewing differences.
-3. In GitHub repository go to **Settings → Pages → Build and deployment → GitHub Actions**.
-4. Merge the reviewed PR; the provided workflow `.github/workflows/pages.yml` publishes `docs/` on pushes to `main`.
-5. Review the **Actions** tab for the `Publish static portfolio preview to GitHub Pages` workflow and the published URL in its `github-pages` environment.
+## Requirements (application)
 
-No Node, PostgreSQL or paid hosting is required for this static preview. **GitHub Pages does not run Payload or PostgreSQL.** This preview is not a production content-management system.
+- Node.js **24.22.1+** (Payload 3.93 accepts `^22.23.4 || >=24.22.1`; the project pins 24)
+- pnpm **10.28** (`corepack enable` or `npm i -g pnpm@10.28.0`)
+- PostgreSQL 16 (one database for the app, a second disposable one for tests)
 
-### View the preview before uploading
+## Quick start
 
 ```bash
-cd docs
-python -m http.server 8080
-```
-
-Open `http://localhost:8080/` in a browser. `file://` will not work because the preview fetches `data/content.json`.
-
-## Next.js + Payload development (when ready to use the CMS)
-
-Requirements: Node.js **24.22.1+**, pnpm, PostgreSQL. Exact package versions in `package.json` need verification on a Node 24 machine with npm network access.
-
-```bash
-corepack enable
 pnpm install
-cp .env.example .env
-# Fill PAYLOAD_SECRET, DATABASE_URL; set USE_DEMO_CONTENT=true for local demo-only pages
-pnpm generate:importmap
-pnpm generate:types
-pnpm build
-pnpm dev
+cp .env.example .env            # fill PAYLOAD_SECRET, DATABASE_URL, TEST_DATABASE_URL, PREVIEW_SECRET
+pnpm db:migrate                 # applies src/migrations (schema changes never use dev "push")
+SEED_ADMIN_EMAIL=you@example.com SEED_ADMIN_PASSWORD='a long passphrase 123' pnpm seed:admin
+pnpm seed:demo                  # optional: bilingual DEMO_ONLY catalogue, homepage blocks, settings
+pnpm dev                        # http://localhost:3000/en , /ar , /admin
 ```
 
-After starting the server, the website lives at `/en` and `/ar`, and Payload Admin lives at `/admin`. Do not expose the server publicly until access tests, first-admin bootstrap and SMTP/password reset are verified. `src/lib/catalog.ts` reads Payload documents when `USE_DEMO_CONTENT` is not `true`, and deliberately does not fall back to demo data if the database fails.
+Production-style run: `pnpm build && pnpm start`.
 
-## Content updates
+`pnpm seed:admin` creates the first administrator **only if no user exists**; afterwards manage accounts in
+`/admin`. Credentials come from the environment and are never stored in the repository.
 
-- For static preview: edit `content/demo-content.json`, run `node scripts/validate-content.mjs` and `node scripts/sync-preview.mjs`; commit updated `docs/data/content.json`.
-- For actual CMS: after installing the application, log in to Payload, create Services and Projects, save as draft, review bilingual text, then publish as Admin. Real CMS-to-UI updates must pass integration QA before external launch.
-- `src/globals/Homepage.ts` models an approved-block homepage builder. Rendering saved blocks in the public site is **not completed** in this starter.
-- Static preview admin (`docs/admin-demo.html`) is **visual only**. It does not save edits and cannot authenticate anyone.
+## Scripts
 
-## Security notes
+| Script | What it does |
+| --- | --- |
+| `pnpm dev` / `pnpm build` / `pnpm start` | Next.js dev server / production build / production server |
+| `pnpm typecheck` / `pnpm lint` | TypeScript 6 strict check / ESLint (next core-web-vitals + typescript) |
+| `pnpm db:migrate` / `db:migrate:create` / `db:migrate:status` | Payload migrations (PostgreSQL) |
+| `pnpm generate:types` / `generate:importmap` | Regenerate `src/payload-types.ts` and the admin import map after schema changes |
+| `pnpm seed:admin` / `pnpm seed:demo` | First admin bootstrap / demo content |
+| `pnpm test:int` | Integration suite (vitest) against `TEST_DATABASE_URL` and a production server. Run `pnpm build` first. |
+| `pnpm test:e2e` | Playwright browser suite (public site at 7 widths × EN/AR, admin flows, static preview) |
+| `pnpm validate:content` / `pnpm sync:preview` | Validate demo JSON and copy it into `docs/data/` |
+| `python3 scripts/verify_scaffold.py` | Static checks of the preview and scaffold (writes `STATIC_CHECKS.md`) |
 
-- `Portfolio_MIS` was observed Public in the previous audit. Never commit `.env`, API keys, private screenshots, customer phone numbers, service URLs, real KPI data or tokens.
-- The Pages preview contains only authored demo content. An unlisted link is **not** private access protection.
-- Admin bootstrap, draft preview/logout protection, server-side media type validation, SMTP, and file upload security require testing before enabling public CMS or sensitive media.
-- See `spec/security-and-risk-register.md` and `spec/phase-gates.md` for the exact review gates.
+The test suites **wipe `TEST_DATABASE_URL`** (its name must contain `test` and it must differ from `DATABASE_URL`).
+They refuse to start if something else is listening on port 3000.
 
-## Why two preview targets?
+## Content model and roles
 
-The approved **unified Next.js + Payload CMS** architecture requires a Node runtime and a database. For now `docs/` is a separate no-backend static representation of the same approved visual design and JSON sample content so you can review and share it on GitHub Pages without hosting expense. Once a Node host is available, the Next + Payload app becomes the editable production site.
+- **Services** and **Projects** are localized (title, summary, challenge, solution, delivered value, SEO).
+  The slug is shared by both languages. Drafts may be incomplete; **publishing requires both English and
+  Arabic** for the required fields.
+- **Project visibility:** `public` (listed, indexable), `unlisted` (reachable only by exact link, `noindex`,
+  never listed or enumerable through the API), `private` (staff only, 404 for visitors).
+- **Roles:** *Editors* create and revise drafts and request review; they cannot publish, unpublish, approve,
+  restore versions, change roles or manage other users. *Admins* approve, publish and manage everything.
+  Editors revise a published project by saving a new draft; the live version stays untouched until an
+  admin publishes it.
+- **Media:** `public-media` (approved public assets, served at `/api/public-media/file/<name>` and the only
+  path allowed through `next/image`) and `private-media` (staff-only, stored outside `public/`, never
+  referenced from public pages). Uploads are validated by content (magic bytes), size and extension; SVG is
+  rejected; images are re-encoded through sharp.
+- **Homepage builder:** a fixed catalogue of seven blocks (hero, introduction, services, featured projects,
+  approach, impact, CTA) rendered in order; built-in defaults are used until the global is published.
+- **Preview:** the admin "Preview" button opens an authenticated draft preview (`PREVIEW_SECRET` + staff
+  session, re-checked on every request). Use the yellow bar's "Exit preview" link to leave it.
+- **Leads:** schema only. Public submission stays disabled until SMTP and anti-spam are configured.
+
+## GitHub Pages (static preview only)
+
+1. The preview is the `docs/` folder. Keep it demo-only: no confidential data, screenshots or links.
+2. Repository **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+3. `.github/workflows/pages.yml` publishes `docs/` on every push to `main` that touches `docs/`.
+4. The published URL appears in the workflow run's `github-pages` environment.
+
+To update the preview content: edit `content/demo-content.json`, run `pnpm validate:content && pnpm sync:preview`,
+and commit `docs/data/content.json`.
+
+## Not done yet (by design, see `spec/phase-gates.md`)
+
+- Email (SMTP): password reset emails are not sent and the contact form stays off until a provider is configured.
+- Rate limiting and CSP are expected from the reverse proxy / Phase 4 hardening; Payload 3 has no built-in rate limit.
+- Object storage (S3/R2) for media; files are stored on local disk.
+- Phase 3 motion (GSAP / Motion / React Three Fiber) and performance budgets.
+- VPS deployment, domain, backups and monitoring (Phase 4).

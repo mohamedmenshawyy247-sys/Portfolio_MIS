@@ -30,8 +30,12 @@ Avoid saying that the static preview Admin is an operational CMS. Do not enable 
 - No VPS/Domain changes now.
 - Next source and CMS require Node 24.22.1+, pnpm install, DB, secret, migration and role tests before exposure.
 
-## Readiness blockers
-- npm registry unreachable from creation environment; `pnpm install` and `next build` not performed.
-- Current container Node 22.16 below minimum selected Payload requirement.
-- Browser navigation blocked by local policy; manual/Playwright visual QA deferred.
-- Auth/first admin, Editor draft editing, upload security, email, staging, CDN and backups are pending real runtime.
+## Verified on 2026-11-05 (local, not deployed)
+- Node 24.22.2 + pnpm 10.28: `pnpm install` resolves every exact pin with no peer warnings; `next build` and `tsc` are clean.
+- PostgreSQL 16: initial migration generated from the schema and applied with `pnpm db:migrate` (adapter runs with `push: false`).
+- Payload admin, REST, Local API, drafts/versions/trash, localization (en/ar, no fallback) and the Arabic/RTL admin UI work at runtime.
+- Security rules are enforced server-side and exercised by `pnpm test:int` (38 tests) and `pnpm test:e2e`.
+
+## Remaining blockers
+- SMTP provider (password reset and lead notifications), object storage for media, reverse-proxy rate limiting and CSP, staging/VPS, backups: Phase 4.
+- Phase 3 motion and performance budgets not started.
