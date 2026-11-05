@@ -5,7 +5,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
 from playwright.sync_api import sync_playwright
-import json
+import json, os
 
 ROOT=Path(__file__).resolve().parents[1]
 DOCS=ROOT/'docs'
@@ -21,7 +21,7 @@ server=ThreadingHTTPServer(('127.0.0.1',0),partial(Quiet,directory=str(DOCS)))
 Thread(target=server.serve_forever,daemon=True).start()
 origin=f'http://127.0.0.1:{server.server_port}'
 with sync_playwright() as p:
-    browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox','--disable-gpu'])
+    browser=p.chromium.launch(executable_path=os.environ.get('PLAYWRIGHT_CHROMIUM_PATH','/usr/bin/chromium'),headless=True,args=['--no-sandbox','--disable-gpu'])
     for width in [360,390,430,768,1024,1440,1920]:
         page=browser.new_page(viewport={'width':width,'height':900},device_scale_factor=1)
         page.on('pageerror',lambda e,w=width: errors.append(f'{w}px: {e}'))

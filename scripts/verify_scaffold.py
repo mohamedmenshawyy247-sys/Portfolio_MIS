@@ -24,16 +24,17 @@ for page in ('index.html','projects.html','case-study.html','admin-demo.html'):
 for path in ('src/collections/Projects.ts','src/collections/Users.ts','src/collections/PrivateMedia.ts','src/collections/Services.ts','src/app/(payload)/layout.tsx','payload.config.ts','.github/workflows/pages.yml'):
  if not (root/path).exists():errs.append(f'{path} missing')
 code=(root/'src/collections/Projects.ts').read_text()
-for token in ('visibility',"'published'",'privateGallery','overrideAccess'):
- if token=='overrideAccess':continue
+access=(root/'src/lib/access.ts').read_text() if (root/'src/lib/access.ts').exists() else ''
+for token in ('visibility','privateGallery'):
  if token not in code:errs.append(f'Project config missing {token}')
+if "'published'" not in code+access:errs.append("Public read rule missing 'published' status constraint")
 for path in (root/'docs').rglob('*.html'):
  if re.search('example[.]invalid|API_KEY|PAYLOAD_SECRET',path.read_text()):errs.append(f'Forbidden placeholder/secret in {path.name}')
 result=subprocess.run(['node','--check',str(root/'docs/assets/app.js')],capture_output=True,text=True)
 if result.returncode:errs.append('JS parse: '+result.stderr)
 result2=subprocess.run(['node',str(root/'scripts/validate-content.mjs')],capture_output=True,text=True)
 if result2.returncode:errs.append('content check: '+result2.stderr)
-report=['# Scaffold Verification (no browser/network required)','','Generated: 2026-11-05','','## Checks','- HTML parsed: all four pages','- Relative file links and static assets checked','- Canonical JSON data matches published preview JSON','- Node JavaScript parse passes','- Content schema checks pass','- Required Next + Payload source files present','- Public demo content has no known placeholder email/secrets','', '## Outcome', 'PASS' if not errs else 'FAIL', '', '## Findings', *(errs if errs else ['No errors in tested static checks.']), '', '## Not covered', '- Visual Playwright navigation was blocked by environment browser policy (`ERR_BLOCKED_BY_ADMINISTRATOR`).','- No `pnpm install`, Next build, TypeScript check, PostgreSQL migration or Payload runtime test: npm registry unavailable.','- No GitHub push or Pages deployment was performed.']
+report=['# Scaffold Verification (no browser/network required)','','Generated: 2026-11-05','','## Checks','- HTML parsed: all four pages','- Relative file links and static assets checked','- Canonical JSON data matches published preview JSON','- Node JavaScript parse passes','- Content schema checks pass','- Required Next + Payload source files present','- Public demo content has no known placeholder email/secrets','', '## Outcome', 'PASS' if not errs else 'FAIL', '', '## Findings', *(errs if errs else ['No errors in tested static checks.']), '', '## Not covered', '- Browser QA of the static preview: run `pnpm test:e2e` (Playwright) or `python scripts/qa_preview.py`.','- Next.js + Payload runtime, migrations and security tests: run `pnpm build && pnpm test:int` (see PHASE_1_2_REPORT.md).','- This script never pushes to GitHub or deploys Pages.']
 (root/'STATIC_CHECKS.md').write_text('\n'.join(report)+'\n')
 print('\n'.join(report))
 if errs:raise SystemExit(1)

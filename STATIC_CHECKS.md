@@ -18,6 +18,6 @@ PASS
 No errors in tested static checks.
 
 ## Not covered
-- Visual Playwright navigation was blocked by environment browser policy (`ERR_BLOCKED_BY_ADMINISTRATOR`).
-- No `pnpm install`, Next build, TypeScript check, PostgreSQL migration or Payload runtime test: npm registry unavailable.
-- No GitHub push or Pages deployment was performed.
+- Browser QA of the static preview: run `pnpm test:e2e` (Playwright) or `python scripts/qa_preview.py`.
+- Next.js + Payload runtime, migrations and security tests: run `pnpm build && pnpm test:int` (see PHASE_1_2_REPORT.md).
+- This script never pushes to GitHub or deploys Pages.
