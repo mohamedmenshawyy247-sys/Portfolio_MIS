@@ -75,6 +75,32 @@ describe('SEC-06/07 private media delivery', () => {
   })
 })
 
+describe('public media approval gate', () => {
+  it('unapproved public assets are invisible to visitors but visible to staff', async () => {
+    const list = await json<{ docs: { id: number }[] }>(await api('/api/public-media?limit=100'))
+    expect(list.docs.map((d) => d.id)).not.toContain(f.unapprovedPublicMediaId)
+    expect([403, 404]).toContain((await api(`/api/public-media/${f.unapprovedPublicMediaId}`)).status)
+    const file = await api(`/api/public-media/file/${f.unapprovedPublicMediaFilename}`)
+    expect([401, 403, 404]).toContain(file.status)
+    expect(file.headers.get('content-type') ?? '').not.toMatch(/^image\//)
+    const optimizer = await fetch(`${BASE_URL}/_next/image?url=${encodeURIComponent(`/api/public-media/file/${f.unapprovedPublicMediaFilename}`)}&w=64&q=75`)
+    expect(optimizer.status).not.toBe(200)
+    expect((await api(`/api/public-media/file/${f.unapprovedPublicMediaFilename}`, { session: editor })).status).toBe(200)
+  })
+
+  it('an unapproved cover is never rendered on the public page; an approved one is', async () => {
+    const id = f.projects.publicPublished
+    const setCover = (cover: null | number) => api(`/api/projects/${id}?locale=en`, { method: 'PATCH', session: admin, body: { cover, _status: 'published' } })
+    expect((await setCover(f.unapprovedPublicMediaId)).status).toBe(200)
+    const withUnapproved = await (await fetch(`${BASE_URL}/en/projects/operations-monitoring-suite`)).text()
+    expect(withUnapproved).not.toContain(f.unapprovedPublicMediaFilename)
+    expect((await setCover(f.publicMediaId)).status).toBe(200)
+    const withApproved = await (await fetch(`${BASE_URL}/en/projects/operations-monitoring-suite`)).text()
+    expect(withApproved).toContain(`/api/public-media/file/`)
+    expect((await setCover(null)).status).toBe(200)
+  })
+})
+
 describe('SEC-08 editor publication boundary over REST', () => {
   const id = () => f.projects.publicPublished
 

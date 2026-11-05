@@ -12,6 +12,8 @@ export type Fixtures = {
   privateMediaId: number
   publicMediaFilename: string
   publicMediaId: number
+  unapprovedPublicMediaFilename: string
+  unapprovedPublicMediaId: number
   projects: { draftOnly: number; privatePublished: number; publicPublished: number; unlistedPublished: number }
   serviceId: number
 }
@@ -71,6 +73,12 @@ export default async function setup(): Promise<() => Promise<void>> {
     data: { alt: 'Fixture public image', approvedForPublic: true },
     file: { data: publicBuf, mimetype: 'image/png', name: 'fixture-public.png', size: publicBuf.length },
   })
+  const unapprovedBuf = await png(72, 54)
+  const unapprovedMedia = await payload.create({
+    collection: 'public-media', overrideAccess: true, locale: 'en',
+    data: { alt: 'Fixture unapproved image', approvedForPublic: false },
+    file: { data: unapprovedBuf, mimetype: 'image/png', name: 'fixture-unapproved.png', size: unapprovedBuf.length },
+  })
   const privateBuf = await png(80, 60)
   const privateMedia = await payload.create({
     collection: 'private-media', overrideAccess: true,
@@ -95,6 +103,7 @@ export default async function setup(): Promise<() => Promise<void>> {
   const fixtures: Fixtures = {
     adminId: admin.id as number, editorId: editor.id as number,
     publicMediaId: publicMedia.id as number, publicMediaFilename: publicMedia.filename ?? 'fixture-public.png',
+    unapprovedPublicMediaId: unapprovedMedia.id as number, unapprovedPublicMediaFilename: unapprovedMedia.filename ?? 'fixture-unapproved.png',
     privateMediaId: privateMedia.id as number, privateMediaFilename: privateMedia.filename ?? 'fixture-private.png',
     projects: { publicPublished: publicProject.id as number, unlistedPublished: unlisted, privatePublished: privateProject, draftOnly: draftOnly.id as number },
     serviceId: service.id as number,

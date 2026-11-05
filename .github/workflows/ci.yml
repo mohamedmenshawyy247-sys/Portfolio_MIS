@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, 'feature/**']
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -23,7 +23,7 @@ jobs:
           POSTGRES_DB: mis_portfolio
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U mis_user"
+          --health-cmd "pg_isready -U mis_user -d mis_portfolio"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10

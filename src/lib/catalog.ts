@@ -75,9 +75,10 @@ async function loadPublicMedia(ids: string[]): Promise<Map<string, MediaRef>> {
   const map = new Map<string, MediaRef>()
   if (ids.length === 0) return map
   const payload = await db()
+  // Only approved assets are rendered, even for staff in preview mode.
   const result = await payload.find({
     collection: 'public-media',
-    where: { id: { in: ids } },
+    where: { and: [{ id: { in: ids } }, { approvedForPublic: { equals: true } }] },
     depth: 0,
     limit: ids.length,
     overrideAccess: false,

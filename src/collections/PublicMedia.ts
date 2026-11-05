@@ -1,10 +1,11 @@
 import type { CollectionConfig } from 'payload'
-import { adminOnly, staffOnly } from '../lib/access'
+import { adminOnly, isStaff, staffOnly } from '../lib/access'
 import { IMAGE_UPLOADS, VIDEO_UPLOADS, validateUploadedFile } from '../lib/upload-guards'
 
 /**
  * Owner-approved public assets. Files are written to public/media but served through Payload's
  * file endpoint (/api/public-media/file/<name>), which is the only path next/image may optimise.
+ * Anonymous readers only ever see assets with `approvedForPublic`; staff see everything.
  */
 export const PublicMedia: CollectionConfig = {
   slug: 'public-media',
@@ -21,7 +22,12 @@ export const PublicMedia: CollectionConfig = {
     adminThumbnail: 'thumbnail',
   },
   admin: { useAsTitle: 'alt' },
-  access: { read: () => true, create: staffOnly, update: staffOnly, delete: adminOnly },
+  access: {
+    read: ({ req }) => (isStaff(req.user) ? true : { approvedForPublic: { equals: true } }),
+    create: staffOnly,
+    update: staffOnly,
+    delete: adminOnly,
+  },
   hooks: { beforeValidate: [validateUploadedFile({ ...IMAGE_UPLOADS, ...VIDEO_UPLOADS })] },
   fields: [
     { name: 'alt', type: 'text', localized: true, required: true, maxLength: 200 },
@@ -30,7 +36,7 @@ export const PublicMedia: CollectionConfig = {
       name: 'approvedForPublic',
       type: 'checkbox',
       defaultValue: false,
-      admin: { description: 'Editorial approval required before linking publicly.' },
+      admin: { description: 'Unapproved assets are never served to visitors or rendered on public pages.' },
     },
   ],
 }
