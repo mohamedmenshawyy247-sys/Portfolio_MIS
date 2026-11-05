@@ -12,3 +12,9 @@ test-results/
 public/media/
 *.pem
 *.key
+
+# Private uploads live outside public/ and are never committed
+private-media/
+qa-screenshots/
+.playwright/
+tests/.tmp/
