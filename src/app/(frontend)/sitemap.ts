@@ -1,13 +1,14 @@
 import type { MetadataRoute } from 'next'
 import { getProjects } from '@/lib/catalog'
+import { siteURL } from '@/lib/site-url'
 
 export const dynamic = 'force-dynamic'
 
-const site = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/+$/, '')
 const locales = ['en', 'ar'] as const
 
 /** Only public, published content is listed. Unlisted, private and draft projects never appear. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const site = siteURL()
   const entries: MetadataRoute.Sitemap = []
   for (const locale of locales) {
     for (const path of ['', '/about', '/services', '/projects', '/impact']) {

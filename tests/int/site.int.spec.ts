@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { BASE_URL } from './env'
+import { fixtures } from './helpers'
 
 const get = (path: string) => fetch(`${BASE_URL}${path}`, { redirect: 'manual' })
+const f = fixtures()
 
 describe('public site', () => {
   it('serves both locales with the right direction and CMS homepage blocks', async () => {
@@ -15,15 +17,28 @@ describe('public site', () => {
     expect(ar).toContain('ذكاء تشغيلي')
   })
 
-  it('redirects / to /en and 404s unknown locales, slugs and traversal attempts', async () => {
+  it('redirects / to the SiteSettings default locale (/en for the seeded settings)', async () => {
     const root = await get('/')
     expect([307, 308]).toContain(root.status)
     expect(root.headers.get('location')).toMatch(/\/en$/)
+  })
+
+  it('404s unknown locales, slugs and traversal attempts', async () => {
     for (const p of ['/xx', '/en/projects/does-not-exist', '/en/projects/..%2Fadmin', '/en/projects/UPPER', '/fr/about']) {
       const res = await get(p)
       expect(res.status, p).toBe(404)
     }
     expect(await (await get('/en/projects/does-not-exist')).text()).toContain('Page not found')
+  })
+
+  it('an unknown locale renders the bilingual 404 page inside the site document, not a bare error shell', async () => {
+    const res = await get('/xx')
+    expect(res.status).toBe(404)
+    const html = await res.text()
+    expect(html).toContain('<html lang="en" dir="ltr">')
+    expect(html).toContain('page-hero not-found')
+    expect(html).toContain('Page not found')
+    expect(html).toContain('الصفحة غير موجودة')
   })
 
   it('lists only public projects; unlisted is reachable by exact link with noindex; private/draft are 404', async () => {
@@ -64,5 +79,33 @@ describe('public site', () => {
     expect(res.headers.get('x-content-type-options')).toBe('nosniff')
     expect(res.headers.get('x-frame-options')).toBe('SAMEORIGIN')
     expect(res.headers.get('x-powered-by')).toBeNull()
+  })
+
+  it('hreflang alternates are absolute URLs on the site origin (metadataBase)', async () => {
+    const html = await (await get('/en')).text()
+    // React renders the attribute as hrefLang; attribute order inside the tag is not guaranteed.
+    const alternates = html.match(/<link[^>]*rel="alternate"[^>]*>/gi) ?? []
+    const ar = alternates.find((tag) => /hreflang="ar"/i.test(tag))
+    expect(ar, alternates.join('\n')).toBeDefined()
+    expect(ar).toContain(`href="${BASE_URL}/ar"`)
+    expect(alternates.find((tag) => /hreflang="en"/i.test(tag))).toContain(`href="${BASE_URL}/en"`)
+  })
+})
+
+describe('public media delivery', () => {
+  it('serves approved files only through the access-checked endpoint, never from public/ at /media/<name>', async () => {
+    const approved = await get(`/api/public-media/file/${f.publicMediaFilename}`)
+    expect(approved.status).toBe(200)
+    expect(approved.headers.get('content-type')).toMatch(/^image\/png/)
+    const unapproved = await get(`/api/public-media/file/${f.unapprovedPublicMediaFilename}`)
+    expect([403, 404]).toContain(unapproved.status)
+    expect(unapproved.headers.get('content-type') ?? '').not.toMatch(/^image\//)
+    // Next serves everything under public/ at its path with no access check. Uploads are stored in
+    // uploads/public-media (PUBLIC_MEDIA_DIR) precisely so that no file is ever reachable this way.
+    for (const name of [f.publicMediaFilename, f.unapprovedPublicMediaFilename]) {
+      const res = await get(`/media/${name}`)
+      expect(res.status, `/media/${name}`).not.toBe(200)
+      expect(res.headers.get('content-type') ?? '', `/media/${name}`).not.toMatch(/^image\//)
+    }
   })
 })

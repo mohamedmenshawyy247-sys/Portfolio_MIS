@@ -30,7 +30,7 @@ GitHub Pages cannot run Payload or PostgreSQL. The static preview is a demo, not
 
 ```bash
 pnpm install
-cp .env.example .env            # fill PAYLOAD_SECRET, DATABASE_URL, TEST_DATABASE_URL, PREVIEW_SECRET
+cp .env.example .env            # fill PAYLOAD_SECRET, DATABASE_URL, TEST_DATABASE_URL, PREVIEW_SECRET, SITE_URL
 pnpm db:migrate                 # applies src/migrations (schema changes never use dev "push")
 SEED_ADMIN_EMAIL=you@example.com SEED_ADMIN_PASSWORD='a long passphrase 123' pnpm seed:admin
 pnpm seed:demo                  # optional: bilingual DEMO_ONLY catalogue, homepage blocks, settings
@@ -58,6 +58,20 @@ Production-style run: `pnpm build && pnpm start`.
 
 The test suites **wipe `TEST_DATABASE_URL`** (its name must contain `test` and it must differ from `DATABASE_URL`).
 They refuse to start if something else is listening on port 3000.
+
+## Environment variables
+
+All variables are listed with comments in `.env.example`. The ones that differ per deployment:
+
+- `SITE_URL`: public origin of the site (`https://example.com`, no trailing slash). It is read at **runtime** and
+  drives Payload's `serverURL`, the only origin allowed for CORS/CSRF, the preview links, `metadataBase`
+  (absolute canonical/hreflang URLs), the sitemap and `robots.txt`. `NEXT_PUBLIC_SITE_URL` is still accepted as a
+  deprecated fallback, but Next inlines `NEXT_PUBLIC_*` values into the build, so a build made with one origin
+  would keep it on every host; set `SITE_URL` on the server instead.
+- `PUBLIC_MEDIA_DIR` / `PRIVATE_MEDIA_DIR`: upload directories (defaults `uploads/public-media` and
+  `uploads/private-media`, git-ignored). Keep them outside `public/`: Next serves that folder at `/media/<name>`
+  with no access check, which would bypass the approval gate and the staff-only rule.
+- `PREVIEW_SECRET`: enables the admin "Preview" button; empty disables draft previews.
 
 ## Content model and roles
 

@@ -2,6 +2,7 @@ import config from '@payload-config'
 import { getPayload, type Payload } from 'payload'
 import demo from '../../content/demo-content.json'
 import type { Homepage, PublicMedia, SiteSetting } from '@/payload-types'
+import { siteURL } from './site-url'
 import { anonymousViewer, type Viewer } from './viewer'
 
 export type Locale = 'ar' | 'en'
@@ -57,22 +58,26 @@ const relativeURL = (url: unknown): string => {
   if (!value) return ''
   try {
     const parsed = new URL(value)
-    const site = new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
+    const site = new URL(siteURL())
     return parsed.origin === site.origin ? `${parsed.pathname}${parsed.search}` : value
   } catch {
     return value
   }
 }
 
+/** public-media also accepts video/mp4; only raster images can be rendered through next/image. */
+const isImage = (mimeType: unknown): boolean => typeof mimeType === 'string' && mimeType.startsWith('image/')
+
 const toMediaRef = (doc: Partial<PublicMedia> | undefined): MediaRef | null => {
-  if (!doc) return null
+  if (!doc || !isImage(doc.mimeType)) return null
   const card = doc.sizes?.card
   const url = relativeURL(card?.url || doc.url)
   if (!url) return null
   return { url, alt: txt(doc.alt), width: card?.width ?? doc.width ?? null, height: card?.height ?? doc.height ?? null }
 }
 
-async function loadPublicMedia(ids: string[]): Promise<Map<string, MediaRef>> {
+/** Approved image assets by id, with `alt` in the requested locale (empty when not entered: no English fallback on Arabic pages). */
+async function loadPublicMedia(ids: string[], locale: Locale): Promise<Map<string, MediaRef>> {
   const map = new Map<string, MediaRef>()
   if (ids.length === 0) return map
   const payload = await db()
@@ -80,6 +85,8 @@ async function loadPublicMedia(ids: string[]): Promise<Map<string, MediaRef>> {
   const result = await payload.find({
     collection: 'public-media',
     where: { and: [{ id: { in: ids } }, { approvedForPublic: { equals: true } }] },
+    locale,
+    fallbackLocale: false,
     depth: 0,
     limit: ids.length,
     overrideAccess: false,
@@ -143,7 +150,7 @@ async function mapProjects(rows: ProjectRow[], locale: Locale, viewer: Viewer): 
     if (cover) mediaIds.add(cover)
     if (Array.isArray(row.publicGallery)) for (const g of row.publicGallery) { const id = relId(g); if (id) mediaIds.add(id) }
   }
-  const media = await loadPublicMedia([...mediaIds])
+  const media = await loadPublicMedia([...mediaIds], locale)
   return rows.map((x) => {
     const visibility = x.visibility === 'public' || x.visibility === 'unlisted' || x.visibility === 'private' ? x.visibility : 'private'
     const coverId = relId(x.cover)
@@ -211,13 +218,36 @@ export async function getProjectBySlug(locale: Locale, slug: string, viewer: Vie
   return project ?? null
 }
 
-/** Homepage builder blocks. Returns null when nothing is published yet (the page then uses built-in defaults). */
+/** A block can only render when its required text exists in the requested locale (hero: headline; every other block: heading). */
+const hasRequiredText = (block: HomepageBlock): boolean => {
+  const text = block.blockType === 'hero' ? block.headline : block.heading
+  return typeof text === 'string' && text.trim() !== ''
+}
+
+/**
+ * Homepage builder blocks in the requested locale. Returns null when nothing is published yet, or when no block
+ * has its required text in this locale (e.g. published from the English editor only): the page then renders the
+ * built-in defaults instead of empty <h1>/<h2> elements. Blocks missing their text are dropped individually.
+ */
 export async function getHomepageBlocks(locale: Locale, viewer: Viewer = anonymousViewer): Promise<HomepageBlock[] | null> {
   if (isDemoContent()) return null
   const payload = await db()
   const doc = await payload.findGlobal({ slug: 'homepage', ...readOptions(viewer), locale, fallbackLocale: false, depth: 0 })
   if (!viewer.draft && doc._status !== 'published') return null
-  return Array.isArray(doc.sections) && doc.sections.length > 0 ? doc.sections : null
+  const sections = Array.isArray(doc.sections) ? doc.sections.filter(hasRequiredText) : []
+  return sections.length > 0 ? sections : null
+}
+
+/** SiteSettings.defaultLocale, the target of the root redirect. English in demo mode or when the database is unreachable. */
+export async function getDefaultLocale(): Promise<Locale> {
+  if (isDemoContent()) return 'en'
+  try {
+    const payload = await db()
+    const doc = (await payload.findGlobal({ slug: 'site-settings', depth: 0, overrideAccess: true })) as Partial<SiteSetting>
+    return doc.defaultLocale === 'ar' ? 'ar' : 'en'
+  } catch {
+    return 'en'
+  }
 }
 
 export async function getSiteInfo(locale: Locale): Promise<SiteInfo> {

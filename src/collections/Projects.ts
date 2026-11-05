@@ -138,8 +138,9 @@ export const Projects: CollectionConfig = {
         },
       },
     },
-    { name: 'cover', type: 'upload', label: { en: 'Cover image', ar: 'صورة الغلاف' }, relationTo: 'public-media' },
-    { name: 'publicGallery', type: 'upload', label: { en: 'Public gallery', ar: 'المعرض العام' }, relationTo: 'public-media', hasMany: true },
+    // Images only: public-media also accepts video/mp4, which next/image cannot render (the catalog skips non-images too).
+    { name: 'cover', type: 'upload', label: { en: 'Cover image', ar: 'صورة الغلاف' }, relationTo: 'public-media', filterOptions: { mimeType: { contains: 'image' } } },
+    { name: 'publicGallery', type: 'upload', label: { en: 'Public gallery', ar: 'المعرض العام' }, relationTo: 'public-media', hasMany: true, filterOptions: { mimeType: { contains: 'image' } } },
     {
       name: 'privateGallery',
       type: 'upload',

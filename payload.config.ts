@@ -12,12 +12,14 @@ import { PrivateMedia } from './src/collections/PrivateMedia'
 import { Leads } from './src/collections/Leads'
 import { SiteSettings } from './src/globals/SiteSettings'
 import { Homepage } from './src/globals/Homepage'
+import { siteURL } from './src/lib/site-url'
 
-const siteURL = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/+$/, '')
+// Read at runtime (SITE_URL), never from the build-time NEXT_PUBLIC_* inlining: see src/lib/site-url.ts.
+const site = siteURL()
 
 export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || '',
-  serverURL: siteURL,
+  serverURL: site,
   editor: lexicalEditor(),
   sharp,
   db: postgresAdapter({
@@ -37,8 +39,8 @@ export default buildConfig({
   globals: [Homepage, SiteSettings],
   localization: { locales: ['en', 'ar'], defaultLocale: 'en', fallback: false },
   graphQL: { disable: true },
-  cors: [siteURL],
-  csrf: [siteURL],
+  cors: [site],
+  csrf: [site],
   // Request-level cap; per-type caps are enforced by the upload collections' validation hooks.
   upload: { limits: { fileSize: 25 * 1024 * 1024 } },
   maxDepth: 2,
