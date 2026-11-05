@@ -1,0 +1,23 @@
+/* Light Premium Admin: brand tokens only (palette from src/styles/site.css). Nothing is hidden, moved or
+   restyled per control; dark mode keeps Payload's defaults. Variables only, so RTL (Arabic) needs no extra rules. */
+:root {
+  --font-body: Inter, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --style-radius-s: 6px;
+  --style-radius-m: 8px;
+  --style-radius-l: 12px;
+}
+html[data-theme="light"] {
+  /* Neutral ramp tinted with navy: paper #fff, pale #f5f8fd, border #e5edf7, secondary #53657f, ink #10213c, navy #071226. */
+  --color-base-0: #ffffff; --color-base-50: #f5f8fd; --color-base-100: #e5edf7; --color-base-150: #d6dfeb;
+  --color-base-200: #c8d2df; --color-base-250: #b9c4d3; --color-base-300: #abb7c7; --color-base-350: #9ca9bb;
+  --color-base-400: #8d9baf; --color-base-450: #7f8ea3; --color-base-500: #708097; --color-base-550: #62738b;
+  --color-base-600: #53657f; --color-base-650: #42546e; --color-base-700: #32435e; --color-base-750: #21324d;
+  --color-base-800: #10213c; --color-base-850: #0d1c35; --color-base-900: #0a172d; --color-base-950: #071226;
+  --color-base-1000: #040b18;
+  /* Accent ramp (Payload's "success" tokens: focus rings, selections, success pills and toasts) around royal blue #1d68ed. */
+  --color-success-50: #eef4fe; --color-success-100: #d7e4fc; --color-success-150: #c0d5fa; --color-success-200: #a8c5f8;
+  --color-success-250: #91b6f6; --color-success-300: #7aa6f5; --color-success-350: #6397f3; --color-success-400: #4b87f1;
+  --color-success-450: #3478ef; --color-success-500: #1d68ed; --color-success-550: #1b5ed7; --color-success-600: #1855c1;
+  --color-success-650: #164bab; --color-success-700: #134295; --color-success-750: #11387e; --color-success-800: #0e2f68;
+  --color-success-850: #0c2552; --color-success-900: #091c3c; --color-success-950: #071226;
+}

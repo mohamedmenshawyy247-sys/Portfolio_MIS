@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, lint, build, integration and browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mis_user
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: mis_portfolio
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U mis_user -d mis_portfolio"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway values for the CI database only. Real deployments use host-managed secrets.
+      DATABASE_URL: postgresql://mis_user:ci_only_password@localhost:5432/mis_portfolio
+      TEST_DATABASE_URL: postgresql://mis_user:ci_only_password@localhost:5432/mis_portfolio_test
+      PAYLOAD_SECRET: ci-only-payload-secret-0123456789abcdef0123456789
+      PREVIEW_SECRET: ci-only-preview-secret
+      SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.2'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Static preview checks
+        run: pnpm validate:content && python3 scripts/verify_scaffold.py
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm build
+      - name: Create the disposable test database
+        run: PGPASSWORD=ci_only_password psql -h localhost -U mis_user -d mis_portfolio -c 'CREATE DATABASE mis_portfolio_test'
+      - name: Apply migrations to a fresh database
+        run: pnpm db:migrate && pnpm db:migrate:status
+      - name: Integration tests (Local API + REST against a production server)
+        run: pnpm test:int
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Browser tests (public site, admin flows, static preview, accessibility)
+        run: pnpm test:e2e
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-evidence
+          path: |
+            playwright-report
+            qa-screenshots
+            STATIC_CHECKS.md
+          if-no-files-found: ignore
+          retention-days: 14

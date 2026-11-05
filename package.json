@@ -1,0 +1,68 @@
+{
+  "name": "mis-department-portfolio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "validate:content": "node scripts/validate-content.mjs",
+    "sync:preview": "node scripts/sync-preview.mjs",
+    "lint": "eslint .",
+    "generate:types": "payload generate:types",
+    "generate:importmap": "payload generate:importmap",
+    "db:migrate": "payload migrate",
+    "db:migrate:create": "payload migrate:create",
+    "db:migrate:status": "payload migrate:status",
+    "seed:admin": "payload run scripts/seed-admin.ts",
+    "seed:demo": "payload run scripts/seed-demo.ts",
+    "test:int": "vitest run",
+    "test:e2e": "playwright test",
+    "qa:static": "python3 scripts/qa_preview.py"
+  },
+  "dependencies": {
+    "@payloadcms/db-postgres": "3.93.0",
+    "@payloadcms/next": "3.93.0",
+    "@payloadcms/richtext-lexical": "3.93.0",
+    "@payloadcms/translations": "3.93.0",
+    "@react-three/drei": "10.7.0",
+    "@react-three/fiber": "9.8.0",
+    "file-type": "21.3.4",
+    "gsap": "3.15.0",
+    "motion": "14.9.0",
+    "next": "16.4.5",
+    "next-intl": "4.14.0",
+    "payload": "3.93.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "sharp": "0.35.5",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.9.1",
+    "@types/react": "19.2.5",
+    "@types/react-dom": "19.2.3",
+    "dotenv": "18.0.9",
+    "eslint": "10.14.0",
+    "eslint-config-next": "16.4.5",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  },
+  "engines": {
+    "node": ">=24.22.1 <27"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "esbuild",
+      "@parcel/watcher",
+      "sharp"
+    ]
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "brand": "MIS Department",
+    "status": "DEMO_ONLY",
+    "contentPrivacy": "Public mock data only. All case studies are illustrative and must be approved before publication.",
+    "version": "0.1.0"
+  },
+  "services": [
+    {
+      "id": "real-time",
+      "icon": "activity",
+      "title": {"en": "Real-Time Monitoring & Operations", "ar": "المراقبة اللحظية وإدارة العمليات"},
+      "summary": {"en": "Transform operational signals into timely, actionable decisions.", "ar": "نحوّل بيانات التشغيل إلى قرارات واضحة في الوقت المناسب."},
+      "points": {"en": ["Operational visibility", "Alerts and follow-ups", "Team-level monitoring"], "ar": ["رؤية تشغيلية واضحة", "تنبيهات ومتابعة", "متابعة أداء الفرق"]}
+    },
+    {
+      "id": "quality",
+      "icon": "shield",
+      "title": {"en": "Quality & Performance Management", "ar": "إدارة الجودة والأداء"},
+      "summary": {"en": "Unify quality workflows, performance reviews and continuous improvement.", "ar": "نجمع إدارة الجودة ومراجعة الأداء والتحسين المستمر في تجربة واحدة."},
+      "points": {"en": ["Quality evaluation", "Coaching workflows", "Actionable performance insights"], "ar": ["تقييم الجودة", "مسارات التطوير والتوجيه", "تحليلات أداء قابلة للتنفيذ"]}
+    },
+    {
+      "id": "reporting",
+      "icon": "chart",
+      "title": {"en": "Dashboards & Advanced Reporting", "ar": "لوحات المعلومات والتقارير المتقدمة"},
+      "summary": {"en": "Deliver clear management views from complex operational data.", "ar": "نقدّم رؤية واضحة للإدارة انطلاقًا من بيانات تشغيلية معقدة."},
+      "points": {"en": ["Executive dashboards", "Reliable reporting", "Decision support"], "ar": ["لوحات إدارة تنفيذية", "تقارير موثوقة", "دعم اتخاذ القرار"]}
+    }
+  ],
+  "projects": [
+    {
+      "slug": "operations-monitoring-suite",
+      "category": "real-time",
+      "visibility": "public",
+      "featured": true,
+      "title": {"en": "Operations Monitoring Suite", "ar": "منصة مراقبة العمليات"},
+      "summary": {"en": "A unified concept for operational visibility and faster response.", "ar": "تصور متكامل لرؤية تشغيلية أفضل واستجابة أسرع."},
+      "challenge": {"en": "Teams need a consolidated view of changing operational signals without switching between fragmented reports.", "ar": "تحتاج الفرق إلى متابعة المؤشرات التشغيلية المتغيرة دون التنقل بين تقارير متعددة."},
+      "solution": {"en": "A single experience brings operational status, exceptions and follow-up workflows into one clear view.", "ar": "تجمع تجربة موحدة الحالة التشغيلية والاستثناءات والمتابعات في واجهة واضحة."},
+      "value": {"en": ["Clearer operational visibility", "Faster identification of exceptions", "More consistent follow-up"], "ar": ["رؤية تشغيلية أوضح", "اكتشاف أسرع للحالات الاستثنائية", "متابعة أكثر اتساقًا"]}
+    },
+    {
+      "slug": "quality-management-hub",
+      "category": "quality",
+      "visibility": "public",
+      "featured": true,
+      "title": {"en": "Quality Management Hub", "ar": "منصة إدارة الجودة"},
+      "summary": {"en": "An integrated concept for evaluation, reviews and performance improvement.", "ar": "تصور موحد للتقييم والمراجعة وتحسين الأداء."},
+      "challenge": {"en": "Quality evaluations and follow-up actions can become disconnected across teams and tools.", "ar": "قد تتوزع تقييمات الجودة وخطوات المتابعة بين الفرق والأدوات المختلفة."},
+      "solution": {"en": "Bring evaluations, review cycles and coaching actions into a structured, traceable workflow.", "ar": "نجمع التقييمات ودورات المراجعة وخطوات التطوير داخل مسار منظم وقابل للتتبع."},
+      "value": {"en": ["More consistent quality workflows", "Transparent follow-up", "Better context for coaching"], "ar": ["مسارات جودة أكثر اتساقًا", "متابعة واضحة", "سياق أفضل لتطوير الموظفين"]}
+    },
+    {
+      "slug": "executive-reporting-suite",
+      "category": "reporting",
+      "visibility": "public",
+      "featured": true,
+      "title": {"en": "Executive Reporting Suite", "ar": "منصة التقارير التنفيذية"},
+      "summary": {"en": "Data storytelling for informed operational and executive decisions.", "ar": "عرض تحليلي للبيانات لدعم القرارات التشغيلية والتنفيذية."},
+      "challenge": {"en": "Complex reporting requires time to interpret and can obscure the most important priorities.", "ar": "تحتاج التقارير المعقدة وقتًا للفهم وقد تخفي الأولويات الأكثر أهمية."},
+      "solution": {"en": "Present meaningful trends, context and drill-down paths in a purposeful dashboard system.", "ar": "نعرض الاتجاهات المهمة والسياق والتفاصيل داخل نظام لوحات معلومات واضح."},
+      "value": {"en": ["Better management clarity", "Consistent reporting views", "Faster access to relevant context"], "ar": ["وضوح أكبر للإدارة", "رؤية موحدة للتقارير", "وصول أسرع للمعلومات المهمة"]}
+    }
+  ]
+}

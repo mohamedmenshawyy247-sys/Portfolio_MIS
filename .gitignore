@@ -1,0 +1,21 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+*.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
+*.pem
+*.key
+
+# Uploads live outside public/ (never served without an access check) and are never committed
+uploads/
+private-media/
+public/media/
+qa-screenshots/
+.playwright/
+tests/.tmp/
