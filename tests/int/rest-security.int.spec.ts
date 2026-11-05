@@ -136,6 +136,50 @@ describe('SEC-08 editor publication boundary over REST', () => {
   })
 })
 
+describe('adversarial review regressions', () => {
+  it('exit-preview never redirects off-site (backslash / protocol-relative / scheme tricks)', async () => {
+    for (const bad of ['/\\evil.com', '/\\/evil.com', '//evil.com', 'https://evil.com', '/%5Cevil.com', '/en/projects\u0000']) {
+      const res = await api(`/exit-preview?path=${encodeURIComponent(bad)}`)
+      expect([302, 307]).toContain(res.status)
+      const location = res.headers.get('location') ?? ''
+      expect(location, bad).not.toMatch(/evil/)
+      expect(location, bad).toMatch(/^(\/|http:\/\/localhost:3000\/)$/)
+    }
+    const good = await api(`/exit-preview?path=${encodeURIComponent('/ar/projects?x=1')}`)
+    expect(good.headers.get('location') ?? '').toMatch(/\/ar\/projects\?x=1$/)
+  })
+
+  it('homepage drafts are never served to visitors, even with ?draft=true', async () => {
+    const saved = await api('/api/globals/homepage?draft=true&locale=en', { method: 'POST', session: editor, body: { _status: 'draft', sections: [{ blockType: 'hero', headline: 'LEAKED-DRAFT-MARKER' }] } })
+    expect(saved.status).toBe(200)
+    const anonDraft = await api('/api/globals/homepage?draft=true&depth=0&locale=en')
+    expect(JSON.stringify(await anonDraft.json())).not.toContain('LEAKED-DRAFT-MARKER')
+    const anonLive = await api('/api/globals/homepage?depth=0&locale=en')
+    expect(JSON.stringify(await anonLive.json())).not.toContain('LEAKED-DRAFT-MARKER')
+    const html = await (await fetch(`${BASE_URL}/en`)).text()
+    expect(html).not.toContain('LEAKED-DRAFT-MARKER')
+    const staffDraft = await api('/api/globals/homepage?draft=true&depth=0&locale=en', { session: editor })
+    expect(JSON.stringify(await staffDraft.json())).toContain('LEAKED-DRAFT-MARKER')
+  })
+
+  it('only admins can unlock accounts', async () => {
+    expect([401, 403]).toContain((await api('/api/users/unlock', { session: editor, body: { email: ADMIN.email } })).status)
+    expect([401, 403]).toContain((await api('/api/users/unlock', { body: { email: ADMIN.email } })).status)
+    expect((await api('/api/users/unlock', { session: admin, body: { email: EDITOR.email } })).status).toBe(200)
+  })
+
+  it('non-canonical status values are rejected with 400, never 500, and never publish', async () => {
+    const id = f.projects.draftOnly
+    for (const body of [{ _status: ['published'] }, { _status: 'Published' }, { _status: { x: 'published' } }, { reviewStatus: ['approved'] }, { reviewStatus: 'Approved' }]) {
+      const res = await api(`/api/projects/${id}?locale=en`, { method: 'PATCH', session: editor, body })
+      expect([400, 403], JSON.stringify(body)).toContain(res.status)
+    }
+    const adminBad = await api(`/api/projects/${id}?locale=en`, { method: 'PATCH', session: admin, body: { _status: ['published'] } })
+    expect(adminBad.status).toBe(400)
+    expect([403, 404]).toContain((await api(`/api/projects/${id}`)).status)
+  })
+})
+
 describe('SEC-17 user management over REST', () => {
   it('editor cannot elevate their own role or touch other users', async () => {
     const self = await api(`/api/users/${f.editorId}`, { method: 'PATCH', session: editor, body: { role: 'admin' } })

@@ -17,6 +17,8 @@ export const Users: CollectionConfig = {
     update: ({ req }) => (isAdmin(req.user) ? true : req.user ? { id: { equals: req.user.id } } : false),
     // Admins may delete other accounts but never their own.
     delete: ({ req, id }) => isAdmin(req.user) && String(req.user?.id) !== String(id),
+    // Clearing a brute-force lockout is an admin action (Payload's default is any signed-in user).
+    unlock: adminOnly,
   },
   fields: [
     { name: 'displayName', type: 'text', required: true, maxLength: 100 },

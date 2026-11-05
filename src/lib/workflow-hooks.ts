@@ -10,6 +10,17 @@ import { isAdmin, isStaff } from './access'
 
 type StatusData = { _status?: unknown; reviewStatus?: unknown; [key: string]: unknown }
 
+const STATUS_VALUES = ['draft', 'published'] as const
+const REVIEW_VALUES = ['draft', 'in-review', 'changes-requested', 'approved'] as const
+
+/** Rejects anything but the exact canonical strings (arrays, objects, other casing) with a 400. */
+function assertCanonical(value: unknown, allowed: readonly string[], field: string): void {
+  if (value === undefined || value === null) return
+  if (typeof value !== 'string' || !allowed.includes(value)) {
+    throw new APIError(`Invalid value for ${field}.`, 400)
+  }
+}
+
 export const LOCALES = ['en', 'ar'] as const
 export type Locale = (typeof LOCALES)[number]
 
@@ -47,6 +58,7 @@ export async function enforceEditorPublicationRules(args: {
   req: PayloadRequest
 }): Promise<void> {
   const { req, data, operation, getLiveStatus } = args
+  assertCanonical(data._status, STATUS_VALUES, '_status')
   if (!req.user || isAdmin(req.user)) return
   if (!isStaff(req.user)) throw new APIError('You are not allowed to change content.', 403)
   if (data._status === 'published') {
@@ -103,6 +115,7 @@ export const editorPublicationGuardGlobal: GlobalBeforeChangeHook = async ({ req
  */
 export const reviewStatusRules: CollectionBeforeChangeHook = ({ req, data, originalDoc }) => {
   const d = data as StatusData
+  assertCanonical(d.reviewStatus, REVIEW_VALUES, 'reviewStatus')
   const previous = (originalDoc as StatusData | undefined)?.reviewStatus
   if (req.user && !isAdmin(req.user) && d.reviewStatus !== previous) {
     if (d.reviewStatus === 'approved' || d.reviewStatus === 'changes-requested') {

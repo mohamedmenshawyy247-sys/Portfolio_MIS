@@ -1,5 +1,5 @@
 import type { GlobalConfig } from 'payload'
-import { staffUpdateNoEditorPublish } from '../lib/access'
+import { isStaff, staffUpdateNoEditorPublish } from '../lib/access'
 import { editorPublicationGuardGlobal } from '../lib/workflow-hooks'
 
 const internalOrHttps = (value: unknown): string | true => {
@@ -22,9 +22,17 @@ const intro = { name: 'intro', type: 'textarea', localized: true, maxLength: 400
  */
 export const Homepage: GlobalConfig = {
   slug: 'homepage',
-  access: { read: () => true, update: staffUpdateNoEditorPublish },
+  access: {
+    // Visitors may only read the published version (Payload's ?draft=true must never leak drafts).
+    read: ({ req }) => (isStaff(req.user) ? true : { _status: { equals: 'published' } }),
+    update: staffUpdateNoEditorPublish,
+  },
   versions: { drafts: true, max: 20 },
-  hooks: { beforeChange: [editorPublicationGuardGlobal] },
+  hooks: {
+    beforeChange: [editorPublicationGuardGlobal],
+    // Belt and braces: whatever version Payload resolved, non-staff never receive unpublished blocks.
+    afterRead: [({ doc, req }) => (isStaff(req.user) || doc?._status === 'published' ? doc : { ...doc, sections: [] })],
+  },
   fields: [
     {
       name: 'sections',

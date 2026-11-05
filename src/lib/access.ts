@@ -39,5 +39,7 @@ export const publicPublished: Where = {
 export const staffUpdateNoEditorPublish: Access = ({ req, data }) => {
   if (isAdmin(req.user)) return true
   if (!isEditor(req.user)) return false
-  return (data as { _status?: unknown } | undefined)?._status !== 'published'
+  const status = (data as { _status?: unknown } | undefined)?._status
+  // Editors may only ever write the canonical draft status (or omit it); anything else is denied.
+  return status === undefined || status === null || status === 'draft'
 }

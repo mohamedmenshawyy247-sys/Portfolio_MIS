@@ -4,6 +4,7 @@ import { draftMode } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { isStaff } from '@/lib/access'
+import { safeInternalPath } from '@/lib/safe-path'
 
 const safeEqual = (a: string, b: string): boolean => {
   const ab = Buffer.from(a)
@@ -21,14 +22,14 @@ export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url)
   const secret = process.env.PREVIEW_SECRET
   const supplied = searchParams.get('secret') ?? ''
-  const path = searchParams.get('path') ?? ''
+  const path = safeInternalPath(searchParams.get('path'))
   const draft = await draftMode()
 
   if (!secret || !safeEqual(secret, supplied)) {
     draft.disable()
     return new Response('Preview is not enabled or the secret is invalid.', { status: 403 })
   }
-  if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\') || /^\/(api|admin|preview|exit-preview)(\/|$)/.test(path)) {
+  if (!path) {
     draft.disable()
     return new Response('Only relative site paths can be previewed.', { status: 400 })
   }
