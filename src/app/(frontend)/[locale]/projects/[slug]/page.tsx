@@ -1,0 +1,7 @@
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { SiteShell } from '@/components/SiteShell'
+import { getProjectBySlug, type Locale } from '@/lib/catalog'
+import { copy } from '@/lib/copy'
+export default async function CasePage({params}:{params:Promise<{locale:Locale,slug:string}>}){const {locale,slug}=await params;const p=await getProjectBySlug(locale,slug);if(!p)notFound();const c=copy(locale);return <SiteShell locale={locale} active="projects"><section className="page-hero"><div className="container"><div className="eyebrow bright">{c.case} · {p.category}</div><h1>{p.title}</h1><p>{p.summary}</p><Link className="button-outline" href={`/${locale}/projects`}>{c.back} ↗</Link></div></section><section className="section"><div className="container"><div className="details-grid"><article className="content-card"><div className="eyebrow">CHALLENGE</div><h2>{c.challenge}</h2><p>{p.challenge}</p></article><article className="content-card"><div className="eyebrow">SOLUTION</div><h2>{c.solution}</h2><p>{p.solution}</p></article></div><div className="section-head" style={{marginTop:65}}><div><h2>{c.value}</h2></div></div><div className="content-card"><ul className="value-list">{p.value.map(x=><li key={x}>{x}</li>)}</ul></div></div></section></SiteShell>}
+export async function generateMetadata({params}:{params:Promise<{locale:Locale,slug:string}>}){const {locale,slug}=await params;const p=await getProjectBySlug(locale,slug);return {title:p?.title ?? 'Case Study',robots:p?.visibility==='unlisted'?'noindex,nofollow':'index,follow'}}

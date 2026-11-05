@@ -1,0 +1,5 @@
+import Link from 'next/link'
+import { SiteShell } from '@/components/SiteShell'
+import { copy } from '@/lib/copy'
+import type { Locale } from '@/lib/catalog'
+export default async function ImpactPage({params}:{params:Promise<{locale:Locale}>}){const {locale}=await params;const c=copy(locale);const en=['Operational visibility','Process consistency','Faster insights','Continuous improvement'];const ar=['رؤية تشغيلية أوضح','اتساق العمليات','تحليلات أسرع','تحسين مستمر'];return <SiteShell locale={locale} active="impact"><section className="page-hero"><div className="container"><div className="eyebrow bright">DELIVERED VALUE</div><h1>{c.impactTitle}</h1><p>{c.impactIntro}</p></div></section><section className="section dark-section"><div className="container"><div className="impact-grid">{(locale==='ar'?ar:en).map(x=><article className="impact-card" key={x}><b>{x}</b><p>{locale==='ar'?'قيمة تشغيلية نوعية بدون اختلاق نسب أداء.':'Qualitative operational value, without invented results.'}</p></article>)}</div><div style={{marginTop:40}}><Link href={`/${locale}/projects`} className="button">{c.explore}</Link></div></div></section></SiteShell>}
