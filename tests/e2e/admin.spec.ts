@@ -47,13 +47,16 @@ test('admin: sees Publish and Preview, and the draft preview shows draft content
   await page.goto(`/admin/collections/projects/${fixtures.projects.draftOnly}`)
   await expect(page.getByRole('button', { name: /^publish changes$|^publish$/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /^save draft$/i })).toBeVisible()
-  const preview = page.getByRole('button', { name: /^preview$/i })
+  // Payload renders Preview as a link whose href is produced by admin.preview (src/lib/preview-url.ts).
+  const preview = page.getByRole('link', { name: /^preview$/i })
   await expect(preview).toBeVisible()
+  const href = await preview.getAttribute('href')
+  expect(href).toContain('/preview?secret=')
+  expect(href).toContain(encodeURIComponent('/en/projects/fixture-draft'))
   await page.screenshot({ path: shot('admin-admin-project'), fullPage: true })
-  // Enter preview the way the Preview button does: an authenticated navigation to /preview.
-  const secret = process.env.PREVIEW_SECRET ?? ''
+  // Follow the Preview link in the same browser context (same session cookie).
   const previewPage = await context.newPage()
-  await previewPage.goto(`/preview?secret=${encodeURIComponent(secret)}&path=${encodeURIComponent('/en/projects/fixture-draft')}`)
+  await previewPage.goto(href!)
   await expect(previewPage).toHaveURL(/\/en\/projects\/fixture-draft$/)
   await expect(previewPage.locator('.preview-bar')).toBeVisible()
   await expect(previewPage.locator('h1')).toHaveText(/Fixture Draft Only/)
@@ -68,12 +71,13 @@ test('admin: sees Publish and Preview, and the draft preview shows draft content
 test('admin panel is available in Arabic with RTL direction', async ({ page }) => {
   await login(page, ADMIN)
   await page.goto('/admin/account')
-  const language = page.locator('#field-language')
+  const language = page.getByRole('combobox', { name: 'Language' })
   await expect(language).toBeVisible()
-  await language.locator('input').first().fill('عربي')
-  await page.keyboard.press('Enter')
-  await page.waitForTimeout(500)
+  await language.click()
+  await page.getByRole('option', { name: /العربية|Arabic/ }).click()
+  // Payload writes dir="RTL" (upper case); HTML attribute values are case-insensitive for dir.
+  await expect(page.locator('html')).toHaveAttribute('dir', /rtl/i)
   await page.goto('/admin')
-  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+  await expect(page.locator('html')).toHaveAttribute('dir', /rtl/i)
   await page.screenshot({ path: shot('admin-ar-dashboard'), fullPage: true })
 })
