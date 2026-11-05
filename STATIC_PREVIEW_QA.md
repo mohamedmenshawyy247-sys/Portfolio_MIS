@@ -1,6 +1,6 @@
 # Static Preview QA — GitHub Pages demo (`docs/`)
 
-**Date:** 2026-11-05 · **Source of evidence:** `tests/e2e/static-preview.spec.ts` as run by `pnpm test:e2e` (session log `test-e2e.log`, tests 23–30, all passed) plus `python3 scripts/verify_scaffold.py` (`STATIC_CHECKS.md`: PASS). This report describes the spec at commit `5343a3d`, which produced the logged run; the later commit `0ff2774` changes `tests/e2e/static-preview.spec.ts` by one line (`let` → `const`, no change to any check) and no run of it is recorded.
+**Date:** 2026-11-05 (updated the same day after the screenshot review) · **Source of evidence:** `tests/e2e/static-preview.spec.ts` as run by `pnpm test:e2e` on HEAD `f01f3b7` (8/8 passed locally and in CI run #10, https://github.com/mohamedmenshawyy247-sys/Portfolio_MIS/actions/runs/41968963985) plus `python3 scripts/verify_scaffold.py` (`STATIC_CHECKS.md`: PASS). Section 6 lists what the screenshot review found in the static preview and how it was fixed.
 
 **What was exercised:** the files in `docs/` served by a throw-away Node HTTP server that the spec starts itself (127.0.0.1, random port). That is the content GitHub Pages would publish, but **GitHub Pages itself was not exercised**: the repository's Pages source setting could not be read from this environment, the branch is not merged into `main`, and no Pages URL exists yet.
 
@@ -20,9 +20,9 @@ For each width the test: opens `/index.html` in EN → expects exactly 3 `.servi
 | 1440 | pass | pass | PASS | 2.5 s | `qa-screenshots/static-home-ar-1440.png` |
 | 1920 | pass | pass | PASS | 1.7 s | — |
 
-7 of 7 passed (`test-e2e.log`, tests 23–29).
+7 of 7 passed (local run on HEAD `f01f3b7` and CI run #10).
 
-## 2. Interaction checks (one test at 1366 × 900, passed in 722 ms — `test-e2e.log` test 30)
+## 2. Interaction checks (one test at 1366 × 900, passed)
 
 | Step | Check | Result |
 | --- | --- | --- |
@@ -51,5 +51,20 @@ The page carries, verbatim: banner **"DESIGN PREVIEW ONLY — not an authenticat
 - `projects.html`, `case-study.html` and `admin-demo.html` across the 7 widths (only `index.html` is width-swept; the interaction test runs at 1366 px).
 - Keyboard navigation and `prefers-reduced-motion` on the static pages (those tests target the Next.js site in `tests/e2e/public-site.spec.ts`).
 - Contrast ratios (4.5:1 / 3:1), Lighthouse and Core Web Vitals: not measured.
-- `pnpm qa:static` (`scripts/qa_preview.py`): result not recorded in this session.
+- `pnpm qa:static` (`scripts/qa_preview.py`): not run in this session (needs the Python Playwright package); it now writes `qa-screenshots/static-preview-qa.generated.md` and never touches this file.
 - The real GitHub Pages deployment: "Settings → Pages → Source: GitHub Actions" must be confirmed by the owner; `.github/workflows/pages.yml` publishes `docs/` only on a push to `main` that touches `docs/**`, i.e. after the pull request is merged; no preview URL exists yet.
+
+## 6. Screenshot review of the static preview and the fixes (2026-11-05)
+
+All 25 QA captures were reviewed tile by tile by an agent that had not written the code. For the static preview it found:
+
+| Finding | Severity | Fix | Verified by |
+| --- | --- | --- | --- |
+| About, Services, the Projects head and the Approach head were blank in the full-page AR captures: `.reveal{opacity:0}` was lifted only by an IntersectionObserver, and the cards re-rendered by the language switch were never re-observed, so they stayed invisible for real users too | major (real bug) | `20b6ed9`: re-observe after re-render; `913c49c`: sections are visible by default and only animate on entry (none under `prefers-reduced-motion` or in print) | Chromium check without scrolling at 390/1440, EN/AR, JS on and off: every `.reveal` at opacity 1; `static-preview.spec.ts` 8/8 |
+| EN/AR toggle on `admin-demo.html` was 1.5:1 against the light header | major | two `data-lang` buttons with `aria-pressed`; 9.0:1 unpressed, 5.9:1 pressed | computed contrast; `static-preview.spec.ts` |
+| Hero pseudo-UI strings stayed English on the Arabic page; "↗" glyphs did not mirror in RTL; the "Improve" step icon was a direction-bound arrow | minor | strings routed through `data-i18n`; inline SVG arrow mirrored with `[dir="rtl"] .arrow{transform:scaleX(-1)}`; neutral glyph | capture review |
+| `.admin-kpi span` 3.9:1 and `.status.draft` 4.45:1 | minor | 6.2:1 and 7.1:1 | computed contrast |
+| 8 × 8 px carousel dots | minor | 24 × 24 px hit targets, visual dot unchanged | measured boxes |
+| Demo counts on the admin mock styled like KPIs | minor | plain small text with the caption "Demo data: counts of the sample content in this preview, not business metrics" (EN/AR) | capture review |
+
+`docs/` still holds the same 8 files and no media; `docs/data/content.json` is unchanged and identical to `content/demo-content.json`.
