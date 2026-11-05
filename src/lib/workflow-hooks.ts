@@ -6,7 +6,7 @@ import {
   type GlobalSlug,
   type PayloadRequest,
 } from 'payload'
-import { isAdmin, isStaff } from './access'
+import { isAdmin, isEditor, isStaff } from './access'
 
 type StatusData = { _status?: unknown; reviewStatus?: unknown; [key: string]: unknown }
 
@@ -40,9 +40,24 @@ const isDraftSave = (req: PayloadRequest, data: StatusData): boolean => {
 }
 
 /**
+ * Query flags with which Payload publishes or unpublishes outside the `_status` field. The admin
+ * Publish and Unpublish buttons send them; Save Draft and autosave never do. Even a `draft=true`
+ * save with `unpublishAllLocales=true` goes through `saveVersion({ unpublish: true })` and rewrites
+ * the latest version in place, and `publishSpecificLocale` publishes one locale. Editors never
+ * need any of them, so their presence (whatever the value) is refused for editors.
+ */
+const LOCALE_PUBLICATION_FLAGS = ['publishAllLocales', 'unpublishAllLocales', 'publishSpecificLocale'] as const
+
+const usesLocalePublicationFlag = (req: PayloadRequest): boolean => {
+  const query = (req.query ?? {}) as Record<string, unknown>
+  return LOCALE_PUBLICATION_FLAGS.some((flag) => flag in query)
+}
+
+/**
  * Server-side publication rules for editors. Runs for the admin UI, REST and the Local API alike,
  * as defence in depth behind `staffUpdateNoEditorPublish`:
  *  - editors can never set `_status: 'published'`;
+ *  - editors can never use Payload's locale publish/unpublish query flags;
  *  - editors can only touch a LIVE (published) document by saving a new draft: never a live write,
  *    never an unpublish.
  * The live status is read from the main document on purpose. When a newer draft version exists,
@@ -61,6 +76,9 @@ export async function enforceEditorPublicationRules(args: {
   assertCanonical(data._status, STATUS_VALUES, '_status')
   if (!req.user || isAdmin(req.user)) return
   if (!isStaff(req.user)) throw new APIError('You are not allowed to change content.', 403)
+  if (isEditor(req.user) && usesLocalePublicationFlag(req)) {
+    throw new APIError('Publishing or unpublishing locales is admin-only; editors save drafts.', 403)
+  }
   if (data._status === 'published') {
     throw new APIError('Editors can save drafts and request review; only admins may publish.', 403)
   }
@@ -174,4 +192,54 @@ export const requireBilingualToPublish = (
     }
     return data
   }
+}
+
+type LocalizedValues = Partial<Record<Locale, unknown>>
+type HomepageBlock = { blockType?: unknown; heading?: unknown; headline?: unknown; id?: unknown }
+
+/** The one text every homepage block must carry in both languages before the page can go live. */
+const requiredHomepageText = (blockType: unknown): 'heading' | 'headline' => (blockType === 'hero' ? 'headline' : 'heading')
+
+/**
+ * Homepage counterpart of `requireBilingualToPublish`. The public page renders blocks with
+ * `fallbackLocale: false`, so a block that only has English would render an empty heading on /ar.
+ * Every section needs its headline (hero) or heading (every other block) in both locales: the
+ * request locale is read from the incoming data (falling back to the stored value for partial
+ * updates), the other locale from the stored draft. Blocks are matched by id, exactly as Payload
+ * merges block rows, so a block with no stored counterpart has no second language yet.
+ */
+export const requireBilingualHomepage: GlobalBeforeChangeHook = async ({ req, data }) => {
+  const d = data as StatusData
+  if (d._status !== 'published') return data
+  const requestLocale = (req.locale ?? 'en') as string
+  // Latest draft in every locale. Deliberately NOT passing `req` (see requireBilingualToPublish);
+  // `overrideAccess: true` also marks this as a trusted read for the homepage afterRead gate.
+  const stored = (await req.payload.findGlobal({
+    slug: 'homepage',
+    depth: 0,
+    draft: true,
+    locale: 'all',
+    overrideAccess: true,
+  })) as unknown as { sections?: unknown }
+  const storedBlocks = Array.isArray(stored.sections) ? (stored.sections as HomepageBlock[]) : []
+  const incoming = Array.isArray(d.sections) ? (d.sections as HomepageBlock[]) : undefined
+  const missing: string[] = []
+  ;(incoming ?? storedBlocks).forEach((block, index) => {
+    const field = requiredHomepageText(block.blockType)
+    const storedBlock = block.id !== undefined && block.id !== null ? storedBlocks.find((candidate) => candidate.id === block.id) : undefined
+    const storedValue = storedBlock?.[field]
+    const storedLocales = (storedValue && typeof storedValue === 'object' ? storedValue : {}) as LocalizedValues
+    for (const locale of LOCALES) {
+      const fromRequest = incoming && locale === requestLocale ? block[field] : undefined
+      const value = fromRequest !== undefined ? fromRequest : storedLocales[locale]
+      if (!hasText(value)) missing.push(`sections[${index}].${field} (${locale})`)
+    }
+  })
+  if (missing.length > 0) {
+    throw new APIError(
+      `Cannot publish the homepage: both English and Arabic are required for every section. Missing: ${missing.join(', ')}. Save as a draft, complete the translation, then publish.`,
+      400,
+    )
+  }
+  return data
 }

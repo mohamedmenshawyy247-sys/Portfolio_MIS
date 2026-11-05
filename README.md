@@ -56,8 +56,12 @@ Production-style run: `pnpm build && pnpm start`.
 | `pnpm validate:content` / `pnpm sync:preview` | Validate demo JSON and copy it into `docs/data/` |
 | `python3 scripts/verify_scaffold.py` | Static checks of the preview and scaffold (writes `STATIC_CHECKS.md`) |
 
-The test suites **wipe `TEST_DATABASE_URL`** (its name must contain `test` and it must differ from `DATABASE_URL`).
-They refuse to start if something else is listening on port 3000.
+The test suites **wipe `TEST_DATABASE_URL`** (its database name must contain `test` as a whole word, e.g.
+`mis_portfolio_test`, and it must be a different database from `DATABASE_URL`). Both refuse to start if something
+else is listening on port 3000 (TCP probe in `tests/int/global-setup.ts`; Playwright never reuses an existing
+server). Uploads made during a run go to `tests/.tmp/media-<pid>/` and are removed at the end of the run.
+`pnpm qa:static` writes its browser report to `qa-screenshots/static-preview-qa.generated.md` (never to
+`STATIC_PREVIEW_QA.md`).
 
 ## Environment variables
 
@@ -81,16 +85,20 @@ All variables are listed with comments in `.env.example`. The ones that differ p
 - **Project visibility:** `public` (listed, indexable), `unlisted` (reachable only by exact link, `noindex`,
   never listed or enumerable through the API), `private` (staff only, 404 for visitors).
 - **Roles:** *Editors* create and revise drafts and request review; they cannot publish, unpublish, approve,
-  restore versions, change roles or manage other users. *Admins* approve, publish and manage everything.
+  read or restore version history, change roles or manage other users (Payload's locale publish flags are
+  refused for editors too). *Admins* approve, publish and manage everything.
   Editors revise a published project by saving a new draft; the live version stays untouched until an
   admin publishes it.
-- **Media:** `public-media` (approved public assets, served at `/api/public-media/file/<name>` and the only
-  path allowed through `next/image`) and `private-media` (staff-only, never referenced from public pages).
+- **Media:** `public-media` (public assets; only admins approve them, and editors may only edit or replace
+  assets that are not yet approved; served at `/api/public-media/file/<name>` and the only path allowed
+  through `next/image`) and `private-media` (staff-only, never referenced from public pages).
   Both are stored under `uploads/` (git-ignored, overridable with `PUBLIC_MEDIA_DIR` / `PRIVATE_MEDIA_DIR`),
   deliberately outside Next's `public/` folder, which would serve files with no access check. Uploads are validated by content (magic bytes), size and extension; SVG is
   rejected; images are re-encoded through sharp.
 - **Homepage builder:** a fixed catalogue of seven blocks (hero, introduction, services, featured projects,
   approach, impact, CTA) rendered in order; built-in defaults are used until the global is published.
+  Publishing the homepage requires every block's headline/heading in both English and Arabic; CTA links must
+  be safe internal paths or https:// URLs.
 - **Preview:** the admin "Preview" button opens an authenticated draft preview (`PREVIEW_SECRET` + staff
   session, re-checked on every request). Use the yellow bar's "Exit preview" link to leave it.
 - **Leads:** schema only. Public submission stays disabled until SMTP and anti-spam are configured.

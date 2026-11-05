@@ -31,14 +31,32 @@ describe('public site', () => {
     expect(await (await get('/en/projects/does-not-exist')).text()).toContain('Page not found')
   })
 
-  it('an unknown locale renders the bilingual 404 page inside the site document, not a bare error shell', async () => {
-    const res = await get('/xx')
-    expect(res.status).toBe(404)
-    const html = await res.text()
-    expect(html).toContain('<html lang="en" dir="ltr">')
-    expect(html).toContain('page-hero not-found')
-    expect(html).toContain('Page not found')
-    expect(html).toContain('الصفحة غير موجودة')
+  it('404s are styled and bilingual: unmatched paths server-rendered, page-level notFound() with the same page', async () => {
+    const strip = (html: string) => html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '')
+    // URLs that match no route: src/app/global-not-found.tsx is a complete server-rendered document.
+    for (const path of ['/en/nope', '/ar/x/y']) {
+      const res = await get(path)
+      expect(res.status, path).toBe(404)
+      const body = strip(await res.text())
+      expect(body, path).toContain('<html lang="en" dir="ltr">')
+      expect(body, path).toMatch(/<link[^>]+rel="stylesheet"/)
+      expect(body, path).toContain('page-hero not-found')
+      expect(body, path).toContain('Page not found')
+      expect(body, path).toContain('الصفحة غير موجودة')
+      expect(body, path).not.toContain('This page could not be found')
+    }
+    // notFound() from a dynamic page (unknown locale, missing slug) and paths outside any locale: Next answers
+    // 404 + noindex with its minimal document and renders the self-styled [locale]/not-found.tsx from the
+    // payload on the client (the browser test '404 page renders styled' covers what visitors see).
+    for (const path of ['/xx', '/en/projects/does-not-exist', '/nope']) {
+      const res = await get(path)
+      expect(res.status, path).toBe(404)
+      const html = await res.text()
+      expect(html, path).toMatch(/<meta name="robots" content="noindex"/)
+      expect(html, path).toContain('page-hero not-found')
+      expect(html, path).toContain('الصفحة غير موجودة')
+      expect(html, path).toContain('.nf a.button{')
+    }
   })
 
   it('lists only public projects; unlisted is reachable by exact link with noindex; private/draft are 404', async () => {

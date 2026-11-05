@@ -16,8 +16,15 @@ export const Users: CollectionConfig = {
     create: adminOnly,
     read: ({ req }) => (isAdmin(req.user) ? true : req.user ? { id: { equals: req.user.id } } : false),
     update: ({ req }) => (isAdmin(req.user) ? true : req.user ? { id: { equals: req.user.id } } : false),
-    // Admins may delete other accounts but never their own.
-    delete: ({ req, id }) => isAdmin(req.user) && String(req.user?.id) !== String(id),
+    // Admins may delete other accounts but never their own. The by-id route is refused outright;
+    // the bulk route (DELETE /api/users?where=...) calls this without `id`, so it gets a constraint
+    // that always excludes the caller's own account.
+    delete: ({ req, id }) => {
+      const user = req.user
+      if (!user || !isAdmin(user)) return false
+      if (id !== undefined && String(id) === String(user.id)) return false
+      return { id: { not_equals: user.id } }
+    },
     // Clearing a brute-force lockout is an admin action (Payload's default is any signed-in user).
     unlock: adminOnly,
   },

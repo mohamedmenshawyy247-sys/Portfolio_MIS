@@ -1,11 +1,14 @@
 import type { GlobalConfig } from 'payload'
-import { isStaff, staffUpdateNoEditorPublish } from '../lib/access'
-import { editorPublicationGuardGlobal } from '../lib/workflow-hooks'
+import { adminOnly, isStaff, staffUpdateNoEditorPublish } from '../lib/access'
+import { safeInternalPath } from '../lib/safe-path'
+import { editorPublicationGuardGlobal, requireBilingualHomepage } from '../lib/workflow-hooks'
 
+/** CTA links: a safe internal site path (validated exactly like redirect targets) or an https:// URL. */
 const internalOrHttps = (value: unknown): string | true => {
   if (value === undefined || value === null || value === '') return true
   if (typeof value !== 'string') return 'Must be a link'
-  if (value.startsWith('/') && !value.startsWith('//')) return true
+  // Browsers read `/\host` as `//host`, so internal links get the same check as redirect targets.
+  if (value.startsWith('/')) return safeInternalPath(value) !== null || 'Only internal site paths such as /en/projects are allowed'
   try {
     return new URL(value).protocol === 'https:' || 'Only internal paths or https:// links are allowed'
   } catch {
@@ -27,13 +30,19 @@ export const Homepage: GlobalConfig = {
   access: {
     // Visitors may only read the published version (Payload's ?draft=true must never leak drafts).
     read: ({ req }) => (isStaff(req.user) ? true : { _status: { equals: 'published' } }),
+    // Version history and restores are admin-only. Payload's global restore runs no beforeChange
+    // hooks and authorises `update` with the restored version's status, so an editor who could read
+    // versions could overwrite or unpublish the live homepage by restoring a draft version.
+    readVersions: adminOnly,
     update: staffUpdateNoEditorPublish,
   },
   versions: { drafts: true, max: 20 },
   hooks: {
-    beforeChange: [editorPublicationGuardGlobal],
+    beforeChange: [editorPublicationGuardGlobal, requireBilingualHomepage],
     // Belt and braces: whatever version Payload resolved, non-staff never receive unpublished blocks.
-    afterRead: [({ doc, req }) => (isStaff(req.user) || doc?._status === 'published' ? doc : { ...doc, sections: [] })],
+    // Trusted server-side reads that bypass access control (`overrideAccess: true`: seeds, hooks)
+    // get the full document; every access-controlled read (REST, catalog.ts) stays gated.
+    afterRead: [({ doc, overrideAccess, req }) => (overrideAccess || isStaff(req.user) || doc?._status === 'published' ? doc : { ...doc, sections: [] })],
   },
   fields: [
     {

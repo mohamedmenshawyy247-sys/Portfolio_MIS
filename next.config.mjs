@@ -3,6 +3,9 @@ import { withPayload } from '@payloadcms/next/withPayload'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // src/app/global-not-found.tsx: a full document for URLs that match no route (the root layout lives in the
+  // dynamic [locale] segment and cannot be reused for them). Experimental flag in Next 16.4; file-based only.
+  experimental: { globalNotFound: true },
   poweredByHeader: false,
   // Do NOT add output: 'export': Payload Admin/DB needs a server.
   images: {

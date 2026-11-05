@@ -1,9 +1,9 @@
 import type { CollectionConfig } from 'payload'
-import { adminOnly, isStaff, staffOnly } from '../lib/access'
+import { adminFieldUpdate, adminOnly, isAdmin, isEditor, isStaff, staffOnly } from '../lib/access'
 import { IMAGE_UPLOADS, VIDEO_UPLOADS, validateUploadedFile } from '../lib/upload-guards'
 
 /**
- * Owner-approved public assets. Files are written to public/media but served through Payload's
+ * Owner-approved public assets. Files are written to uploads/public-media (PUBLIC_MEDIA_DIR) and served only through Payload's
  * file endpoint (/api/public-media/file/<name>), which is the only path next/image may optimise.
  * Anonymous readers only ever see assets with `approvedForPublic`; staff see everything.
  */
@@ -29,7 +29,10 @@ export const PublicMedia: CollectionConfig = {
   access: {
     read: ({ req }) => (isStaff(req.user) ? true : { approvedForPublic: { equals: true } }),
     create: staffOnly,
-    update: staffOnly,
+    // Editors may edit or replace the file of UNAPPROVED assets only. Anything already approved may
+    // be in use on a published page (project cover, gallery, logo) and is admin-only, exactly like
+    // approval itself (see the field-level access on `approvedForPublic`).
+    update: ({ req }) => (isAdmin(req.user) ? true : isEditor(req.user) ? { approvedForPublic: { equals: false } } : false),
     delete: adminOnly,
   },
   hooks: { beforeValidate: [validateUploadedFile({ ...IMAGE_UPLOADS, ...VIDEO_UPLOADS })] },
@@ -41,6 +44,9 @@ export const PublicMedia: CollectionConfig = {
       type: 'checkbox',
       label: { en: 'Approved for public use', ar: 'معتمد للعرض العام' },
       defaultValue: false,
+      // Only admins approve. Payload silently discards the field for everyone else (same pattern as
+      // users.role), so an editor sending approvedForPublic=true on create or update keeps `false`.
+      access: { create: adminFieldUpdate, update: adminFieldUpdate },
       admin: {
         description: {
           en: 'Unapproved assets are never served to visitors or rendered on public pages.',

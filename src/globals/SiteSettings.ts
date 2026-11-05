@@ -4,7 +4,9 @@ import { adminOnly } from '../lib/access'
 export const SiteSettings: GlobalConfig = {
   slug: 'site-settings',
   label: { en: 'Site settings', ar: 'إعدادات الموقع' },
-  access: { read: () => true, update: adminOnly },
+  // No versions today; `readVersions` is still pinned to admins so enabling drafts later cannot
+  // reopen version history or restores to editors.
+  access: { read: () => true, readVersions: adminOnly, update: adminOnly },
   fields: [
     { name: 'brandName', type: 'text', label: { en: 'Brand name', ar: 'اسم العلامة' }, required: true, defaultValue: 'MIS Department', maxLength: 60 },
     { name: 'tagline', type: 'text', label: { en: 'Tagline', ar: 'الشعار النصي' }, localized: true, maxLength: 120 },

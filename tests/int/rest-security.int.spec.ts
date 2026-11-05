@@ -138,7 +138,8 @@ describe('SEC-08 editor publication boundary over REST', () => {
 
 describe('adversarial review regressions', () => {
   it('exit-preview never redirects off-site (backslash / protocol-relative / scheme tricks)', async () => {
-    for (const bad of ['/\\evil.com', '/\\/evil.com', '//evil.com', 'https://evil.com', '/%5Cevil.com', '/en/projects\u0000']) {
+    // The last five normalise to the scheme-relative `//evil.com` once WHATWG dot-segment removal runs.
+    for (const bad of ['/\\evil.com', '/\\/evil.com', '//evil.com', 'https://evil.com', '/%5Cevil.com', '/en/projects\u0000', '/.//evil.com', '/..//evil.com', '/%2e//evil.com', '/en/%2e%2e//evil.com?x=1', '/en/..//evil.com']) {
       const res = await api(`/exit-preview?path=${encodeURIComponent(bad)}`)
       expect([302, 307]).toContain(res.status)
       const location = res.headers.get('location') ?? ''
@@ -186,6 +187,157 @@ describe('adversarial review regressions', () => {
     const adminBad = await api(`/api/projects/${id}?locale=en`, { method: 'PATCH', session: admin, body: { _status: ['published'] } })
     expect(adminBad.status).toBe(400)
     expect([403, 404]).toContain((await api(`/api/projects/${id}`)).status)
+  })
+})
+
+describe('access-control review regressions', () => {
+  type Block = Record<string, unknown> & { blockType: string; id?: null | string }
+  type HomepageDoc = { _status?: string; sections?: Block[] | null }
+  const homepage = async (query: string, session: null | Session = null) => json<HomepageDoc>(await api(`/api/globals/homepage?depth=0&${query}`, { session }))
+  const saveHomepage = (query: string, body: Record<string, unknown>, session: Session = admin) => api(`/api/globals/homepage?depth=0&${query}`, { method: 'POST', session, body })
+  /** Drops null-valued keys so a document written back through REST compares equal to its snapshot. */
+  const strip = <T>(value: T): T => JSON.parse(JSON.stringify(value, (_key, v: unknown) => (v === null ? undefined : v))) as T
+  /** The live homepage in both languages, block ids included, so a test can put it back exactly as it found it. */
+  const snapshotHomepage = async () => ({ en: (await homepage('locale=en', admin)).sections ?? [], ar: (await homepage('locale=ar', admin)).sections ?? [] })
+  const restoreHomepage = async (snap: { ar: Block[]; en: Block[] }) => {
+    expect((await saveHomepage('locale=en&draft=true', { sections: snap.en })).status).toBe(200)
+    expect((await saveHomepage('locale=ar&draft=true', { sections: snap.ar })).status).toBe(200)
+    expect((await saveHomepage('locale=en', { _status: 'published' })).status).toBe(200)
+    expect(strip((await homepage('locale=en')).sections ?? [])).toEqual(strip(snap.en))
+    expect(strip((await homepage('locale=ar')).sections ?? [])).toEqual(strip(snap.ar))
+  }
+
+  it('version history and version restore are admin-only, for globals and collections', async () => {
+    for (const path of ['/api/globals/homepage/versions', '/api/projects/versions', '/api/services/versions']) {
+      expect((await api(path, { session: editor })).status, path).toBe(403)
+      expect((await api(path, { session: admin })).status, path).toBe(200)
+    }
+    const versions = await json<{ docs: { id: number }[] }>(await api('/api/globals/homepage/versions?limit=1', { session: admin }))
+    expect(versions.docs.length).toBe(1)
+    const versionId = versions.docs[0]!.id
+    const before = await homepage('locale=en')
+    expect(before._status).toBe('published')
+    // Payload's global restore runs no beforeChange hooks; it must be stopped by readVersions.
+    for (const query of ['', '?draft=true']) {
+      expect((await api(`/api/globals/homepage/versions/${versionId}${query}`, { method: 'POST', session: editor })).status, query).toBe(403)
+    }
+    expect([403, 404]).toContain((await api(`/api/globals/homepage/versions/${versionId}`, { session: editor })).status)
+    expect(await homepage('locale=en')).toEqual(before)
+  })
+
+  it('editors cannot approve public media or touch approved assets; admins can', async () => {
+    const unapproved = `/api/public-media/${f.unapprovedPublicMediaId}`
+    const approved = `/api/public-media/${f.publicMediaId}`
+    // Payload drops the field for editors (field-level access): the save succeeds, the asset stays unapproved.
+    const attempt = await api(`${unapproved}?locale=en`, { method: 'PATCH', session: editor, body: { approvedForPublic: true, caption: 'editor caption' } })
+    expect(attempt.status).toBe(200)
+    const attempted = await json<{ doc: { approvedForPublic: boolean; caption?: null | string } }>(attempt)
+    expect(attempted.doc.approvedForPublic).toBe(false)
+    expect(attempted.doc.caption).toBe('editor caption')
+    expect([403, 404]).toContain((await api(unapproved)).status)
+    // Approved assets may be in use on published pages: no edits and no file replacement by editors.
+    expect([403, 404]).toContain((await api(`${approved}?locale=en`, { method: 'PATCH', session: editor, body: { alt: 'editor touch' } })).status)
+    const png = await pngBuffer()
+    expect([403, 404]).toContain((await api(`${approved}?locale=en`, { method: 'PATCH', session: editor, raw: uploadForm({ buffer: png, name: 'swap.png', type: 'image/png' }, { alt: 'swap' }) })).status)
+    const asAdmin = await json<{ alt: string }>(await api(`${approved}?locale=en`, { session: admin }))
+    expect(asAdmin.alt).toBe('Fixture public image')
+    // Claiming approval on upload is dropped the same way.
+    const upload = await api('/api/public-media?locale=en', { session: editor, raw: uploadForm({ buffer: png, name: 'claim.png', type: 'image/png' }, { alt: 'Claimed approval', approvedForPublic: true }) })
+    expect(upload.status).toBe(201)
+    const uploaded = await json<{ doc: { approvedForPublic: boolean; id: number } }>(upload)
+    expect(uploaded.doc.approvedForPublic).toBe(false)
+    expect([403, 404]).toContain((await api(`/api/public-media/${uploaded.doc.id}`)).status)
+    // Admins approve; the fixture is then put back exactly as it was found.
+    const approve = await api(`${unapproved}?locale=en`, { method: 'PATCH', session: admin, body: { approvedForPublic: true } })
+    expect(approve.status).toBe(200)
+    expect((await json<{ doc: { approvedForPublic: boolean } }>(approve)).doc.approvedForPublic).toBe(true)
+    expect((await api(unapproved)).status).toBe(200)
+    const revert = await api(`${unapproved}?locale=en`, { method: 'PATCH', session: admin, body: { approvedForPublic: false, caption: null } })
+    expect(revert.status).toBe(200)
+    expect((await json<{ doc: { approvedForPublic: boolean } }>(revert)).doc.approvedForPublic).toBe(false)
+    expect([403, 404]).toContain((await api(unapproved)).status)
+  })
+
+  it('admins cannot delete their own account, by id or through the bulk route', async () => {
+    expect((await api(`/api/users/${f.adminId}`, { method: 'DELETE', session: admin })).status).toBe(403)
+    const bulk = await api(`/api/users?where[id][equals]=${f.adminId}`, { method: 'DELETE', session: admin })
+    expect(bulk.status).toBe(200)
+    const result = await json<{ docs: unknown[]; errors: unknown[] }>(bulk)
+    expect(result.docs).toEqual([])
+    expect(result.errors).toEqual([])
+    const me = await api('/api/users/me', { session: admin })
+    expect(me.status).toBe(200)
+    expect((await json<{ user: null | { id: number } }>(me)).user?.id).toBe(f.adminId)
+    expect((await api(`/api/users/${f.adminId}`, { session: admin })).status).toBe(200)
+  })
+
+  it('editors cannot publish or unpublish through the locale query flags; admins can', async () => {
+    const id = f.projects.publicPublished
+    for (const flag of ['draft=true&unpublishAllLocales=true', 'unpublishAllLocales=true', 'draft=true&publishAllLocales=true', 'publishSpecificLocale=en', 'draft=true&publishSpecificLocale=en']) {
+      expect((await api(`/api/projects/${id}?locale=en&${flag}`, { method: 'PATCH', session: editor, body: { title: 'x' } })).status, flag).toBe(403)
+      expect((await api(`/api/globals/homepage?locale=en&${flag}`, { method: 'POST', session: editor, body: {} })).status, flag).toBe(403)
+    }
+    const live = await json<Doc>(await api(`/api/projects/${id}?locale=en`))
+    expect(live._status).toBe('published')
+    expect(live.title).toBe('Operations Monitoring Suite')
+    expect((await homepage('locale=en'))._status).toBe('published')
+    const unlisted = f.projects.unlistedPublished
+    const adminPublish = await api(`/api/projects/${unlisted}?locale=en&publishSpecificLocale=en`, { method: 'PATCH', session: admin, body: { _status: 'published' } })
+    expect(adminPublish.status).toBe(200)
+    expect((await json<{ doc: Doc }>(adminPublish)).doc._status).toBe('published')
+    const after = await json<Doc & { title: string }>(await api(`/api/projects/${unlisted}?locale=en`, { session: editor }))
+    expect(after._status).toBe('published')
+    expect(after.title).toBe('Fixture Unlisted')
+  })
+
+  it('homepage CTA links must be safe internal paths or https:// URLs', async () => {
+    const snap = await snapshotHomepage()
+    // A CTA block that exists in both languages, so only the link decides whether publishing works.
+    const cta = { blockType: 'cta', heading: 'اكتشف', label: 'اذهب', href: '/ar/projects' }
+    expect((await saveHomepage('locale=ar&draft=true', { sections: [...snap.ar, cta] })).status).toBe(200)
+    const arDraft = (await homepage('locale=ar&draft=true', admin)).sections ?? []
+    const ctaId = arDraft[arDraft.length - 1]?.id
+    expect(ctaId).toBeTruthy()
+    const publishWith = (href: string) => saveHomepage('locale=en', { _status: 'published', sections: [...snap.en, { ...cta, id: ctaId, heading: 'Discover', label: 'Go', href }] })
+    for (const bad of ['/\\evil.com', '/\\/evil.com', '//evil.com', '/.//evil.com', '/%5Cevil.com', 'javascript:alert(1)', 'http://example.org/x', '/admin']) {
+      const res = await publishWith(bad)
+      expect(res.status, bad).toBe(400)
+      expect(JSON.stringify(await res.json()), bad).toMatch(/href|Link/)
+    }
+    expect(strip((await homepage('locale=en')).sections ?? [])).toEqual(strip(snap.en))
+    for (const good of ['/en/projects', 'https://example.org/x']) {
+      expect((await publishWith(good)).status, good).toBe(200)
+      const live = (await homepage('locale=en')).sections ?? []
+      expect(live[live.length - 1]?.href, good).toBe(good)
+    }
+    await restoreHomepage(snap)
+  })
+
+  it('the homepage cannot be published while a block lacks its text in one language', async () => {
+    const snap = await snapshotHomepage()
+    expect((await saveHomepage('locale=ar&draft=true', { sections: snap.ar })).status).toBe(200)
+    const englishOnly = { blockType: 'introduction', heading: 'English-only heading', text: 'Still waiting for a translation.' }
+    expect((await saveHomepage('locale=en&draft=true', { sections: [...snap.en, englishOnly] })).status).toBe(200)
+    const publish = await saveHomepage('locale=en', { _status: 'published' })
+    expect(publish.status).toBe(400)
+    const message = JSON.stringify(await publish.json())
+    expect(message).toMatch(/Arabic|\(ar\)/)
+    expect(message).toContain(`sections[${snap.en.length}].heading (ar)`)
+    expect(strip((await homepage('locale=en')).sections ?? [])).toEqual(strip(snap.en))
+    // Add the Arabic heading to the same block (matched by id) and the publish goes through.
+    const draft = (await homepage('locale=en&draft=true', admin)).sections ?? []
+    const added = draft[snap.en.length]
+    expect(added?.heading).toBe('English-only heading')
+    expect((await saveHomepage('locale=ar&draft=true', { sections: [...snap.ar, { ...added, heading: 'عنوان بالعربية', text: 'نص عربي' }] })).status).toBe(200)
+    expect((await saveHomepage('locale=en', { _status: 'published' })).status).toBe(200)
+    expect(JSON.stringify(await homepage('locale=ar'))).toContain('عنوان بالعربية')
+    // The other direction is refused too: an Arabic-only block cannot be published from the Arabic editor.
+    const arLive = (await homepage('locale=ar', admin)).sections ?? []
+    expect((await saveHomepage('locale=ar&draft=true', { sections: [...arLive, { blockType: 'cta', heading: 'عربي فقط', label: 'اذهب', href: '/ar/projects' }] })).status).toBe(200)
+    const arPublish = await saveHomepage('locale=ar', { _status: 'published' })
+    expect(arPublish.status).toBe(400)
+    expect(JSON.stringify(await arPublish.json())).toContain(`sections[${arLive.length}].heading (en)`)
+    await restoreHomepage(snap)
   })
 })
 

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import type { Payload } from 'payload'
-import type { Homepage } from '@/payload-types'
+import type { Homepage, SiteSetting } from '@/payload-types'
+import { LOCALES } from './workflow-hooks'
 
 type Sections = NonNullable<Homepage['sections']>
 type L = { en: string; ar: string }
@@ -95,12 +96,37 @@ async function seedHomepage(payload: Payload) {
   log('homepage: 7 approved blocks published (en+ar)')
 }
 
+type SettingsDefaults = Partial<Pick<SiteSetting, 'accentColor' | 'brandName' | 'defaultLocale' | 'footerNote' | 'tagline'>>
+/** Shared (non-localized) values are written with the English pass; the localized ones per locale. */
+const SETTINGS_SHARED: SettingsDefaults = { brandName: 'MIS Department', defaultLocale: 'en', accentColor: 'blue' }
+const SETTINGS_LOCALIZED: Record<(typeof LOCALES)[number], SettingsDefaults> = {
+  en: { tagline: 'Operational Intelligence, Real Impact.', footerNote: 'Illustrative portfolio preview. No customer data.' },
+  ar: { tagline: 'ذكاء تشغيلي وأثر واضح.', footerNote: 'معاينة توضيحية. بدون بيانات عملاء.' },
+}
+
+const isBlank = (value: unknown): boolean => value === undefined || value === null || (typeof value === 'string' && value.trim() === '')
+
+/**
+ * Fills site settings that are still empty, locale by locale, and never overwrites a value that is already set (an
+ * admin's customisation survives a re-run). Fields with a schema default read back as that default and are therefore
+ * left to Payload, which stores them on the first save.
+ */
 async function seedSettings(payload: Payload) {
-  const current = await payload.findGlobal({ slug: 'site-settings', overrideAccess: true, depth: 0 })
-  if (current.tagline) return
-  await payload.updateGlobal({ slug: 'site-settings', locale: 'en', overrideAccess: true, data: { brandName: 'MIS Department', tagline: 'Operational Intelligence, Real Impact.', footerNote: 'Illustrative portfolio preview. No customer data.', defaultLocale: 'en', accentColor: 'blue' } })
-  await payload.updateGlobal({ slug: 'site-settings', locale: 'ar', overrideAccess: true, data: { tagline: 'ذكاء تشغيلي وأثر واضح.', footerNote: 'معاينة توضيحية. بدون بيانات عملاء.' } })
-  log('site-settings: defaults written (en+ar)')
+  for (const locale of LOCALES) {
+    const current = await payload.findGlobal({ slug: 'site-settings', locale, overrideAccess: true, depth: 0 })
+    const wanted: SettingsDefaults = { ...SETTINGS_LOCALIZED[locale], ...(locale === 'en' ? SETTINGS_SHARED : {}) }
+    const data: SettingsDefaults = {}
+    for (const field of Object.keys(wanted) as (keyof SettingsDefaults)[]) {
+      if (isBlank(current[field])) Object.assign(data, { [field]: wanted[field] })
+    }
+    const written = Object.keys(data)
+    if (written.length === 0) {
+      log(`site-settings (${locale}): nothing written, every seeded field already has a value`)
+      continue
+    }
+    await payload.updateGlobal({ slug: 'site-settings', locale, overrideAccess: true, data })
+    log(`site-settings (${locale}): wrote ${written.join(', ')}`)
+  }
 }
 
 

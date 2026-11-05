@@ -54,7 +54,10 @@ export const Projects: CollectionConfig = {
   trash: true,
   access: {
     read: ({ req }) => (isStaff(req.user) ? true : publicPublished),
-    readVersions: staffOnly,
+    // Version history is admin-only. Restores are already refused for editors by `update` access
+    // (restored status) plus the editorPublicationGuard hook; hiding the history also removes the
+    // version ids they would need. Editors keep Save Draft; they only lose the Versions tab.
+    readVersions: adminOnly,
     create: staffOnly,
     update: staffUpdateNoEditorPublish,
     delete: adminOnly,

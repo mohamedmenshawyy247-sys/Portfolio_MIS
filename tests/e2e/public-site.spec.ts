@@ -99,3 +99,21 @@ test('projects gallery on a phone stacks vertically with usable controls', async
   await expectNoHorizontalOverflow(page, 'projects ar 390')
   await page.screenshot({ path: shot('projects-ar-390'), fullPage: true })
 })
+
+test('404 page renders styled and bilingual for an unknown path and an unknown locale', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  for (const path of ['/en/this-page-does-not-exist', '/xx']) {
+    const res = await page.goto(path)
+    expect(res?.status(), path).toBe(404)
+    const hero = page.locator('.page-hero.not-found')
+    await expect(hero, path).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Page not found' }), path).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'الصفحة غير موجودة' }), path).toBeVisible()
+    // The styles are applied (dark gradient band, white heading), i.e. not Next's unstyled fallback.
+    const styles = await hero.evaluate((el) => ({ background: getComputedStyle(el).backgroundImage, color: getComputedStyle(el.querySelector('h1')!).color }))
+    expect(styles.background, path).toContain('gradient')
+    expect(styles.color, path).toBe('rgb(255, 255, 255)')
+    await expect(page.getByRole('link', { name: 'English' }), path).toHaveAttribute('href', '/en')
+  }
+  await page.screenshot({ path: shot('not-found-en-1440'), fullPage: true })
+})

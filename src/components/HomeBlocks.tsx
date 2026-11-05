@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import type { HomepageBlock, Locale, PortfolioProject, PortfolioService } from '@/lib/catalog'
 import { copy } from '@/lib/copy'
+import { safeInternalPath } from '@/lib/safe-path'
 import FeaturedCarousel, { type FeaturedItem } from './FeaturedCarousel'
 import { PreviewDashboard, ServiceIcon } from './SiteShell'
 
@@ -27,9 +28,10 @@ export function defaultHomepageBlocks(locale: Locale): HomepageBlock[] {
   ]
 }
 
+/** CTA target: a validated internal site path (browsers read `/\host` as `//host`) or an https:// URL; anything else falls back. */
 const safeHref = (href: unknown, fallback: string): string => {
   if (typeof href !== 'string' || !href) return fallback
-  if (href.startsWith('/') && !href.startsWith('//')) return href
+  if (href.startsWith('/')) return safeInternalPath(href) ?? fallback
   try { return new URL(href).protocol === 'https:' ? href : fallback } catch { return fallback }
 }
 

@@ -1,9 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /**
- * Browser QA against a production build. The web server is a seeded test instance started by
- * tests/e2e/serve.ts (fresh TEST_DATABASE_URL schema, demo content, test accounts). If a server
- * is already listening on :3000 it is reused, so make sure it is the one you mean to test.
+ * Browser QA against a production build. The web server is a seeded test instance started by tests/e2e/serve.ts
+ * (TCP port guard on :3000, fresh TEST_DATABASE_URL schema, demo content, test accounts, per-run upload directories).
+ * `reuseExistingServer` stays off on purpose: a server that already listens on :3000 (for example `pnpm dev` on the
+ * real DATABASE_URL) must never become the target of the admin flows, so Playwright fails fast instead of reusing it.
+ * `gracefulShutdown` sends SIGTERM to the server's process group at the end of the run (the default is SIGKILL), so
+ * serve.ts can wait for `next start` to exit, confirm the port is free and remove the per-run upload directory.
  */
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -24,7 +27,8 @@ export default defineConfig({
   webServer: {
     command: 'pnpm exec tsx tests/e2e/serve.ts',
     url: 'http://localhost:3000/en',
-    reuseExistingServer: true,
+    reuseExistingServer: false,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 30_000 },
     timeout: 240_000,
     stdout: 'ignore',
     stderr: 'pipe',

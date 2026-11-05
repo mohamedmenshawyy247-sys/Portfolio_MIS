@@ -1,6 +1,7 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
+import { createRequire } from 'node:module'
 import { connect } from 'node:net'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import sharp from 'sharp'
 import { ADMIN, BASE_URL, EDITOR, TEST_PORT, loadTestEnv } from './env'
@@ -8,6 +9,8 @@ import { ADMIN, BASE_URL, EDITOR, TEST_PORT, loadTestEnv } from './env'
 export type Fixtures = {
   adminId: number
   editorId: number
+  /** Per-run upload directories (tests/.tmp/media-<pid>/{public,private}); the teardown removes `root`. */
+  mediaDir: { private: string; public: string; root: string }
   privateMediaFilename: string
   privateMediaId: number
   publicMediaFilename: string
@@ -18,7 +21,9 @@ export type Fixtures = {
   serviceId: number
 }
 
+const TMP_DIR = resolve(process.cwd(), 'tests/.tmp')
 let server: ChildProcess | undefined
+let mediaRoot: string | undefined
 
 async function png(width = 64, height = 48): Promise<Buffer> {
   return sharp({ create: { width, height, channels: 3, background: { r: 29, g: 104, b: 237 } } }).png().toBuffer()
@@ -47,10 +52,53 @@ async function waitForServer(url: string, attempts = 90): Promise<void> {
   throw new Error(`Server at ${url} did not start`)
 }
 
+/** Resolves once nothing accepts connections on the port any more, so the next suite can bind it immediately. */
+async function waitForPortFree(port: number, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (await portInUse(port)) {
+    if (Date.now() > deadline) throw new Error(`Port ${port} is still in use ${timeoutMs} ms after the test server was told to stop.`)
+    await new Promise((r) => setTimeout(r, 250))
+  }
+}
+
+/** SIGTERM, await the child's `exit` event, escalate to SIGKILL after `graceMs`, then fail loudly. */
+async function stopServer(child: ChildProcess, graceMs = 15_000): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return
+  const exited = new Promise<'exited'>((r) => child.once('exit', () => r('exited')))
+  const timeout = (ms: number) => new Promise<'timeout'>((r) => setTimeout(r, ms, 'timeout').unref())
+  child.kill('SIGTERM')
+  if ((await Promise.race([exited, timeout(graceMs)])) === 'exited') return
+  child.kill('SIGKILL')
+  if ((await Promise.race([exited, timeout(5_000)])) !== 'exited') throw new Error('The test server did not exit after SIGKILL.')
+}
+
+/**
+ * Per-run upload directories, so fixture and test uploads never land in (or accumulate under) the real uploads/
+ * folders. The upload collections read PUBLIC_MEDIA_DIR / PRIVATE_MEDIA_DIR when payload.config is imported, so this
+ * runs before that import; the spawned `next start` and the vitest workers inherit the variables. The port guard has
+ * already established that no other test server is running, so any media-* directory left behind by a killed run
+ * is stale and is removed here.
+ */
+function prepareMediaDirs(): Fixtures['mediaDir'] {
+  mkdirSync(TMP_DIR, { recursive: true })
+  for (const entry of readdirSync(TMP_DIR)) {
+    if (entry.startsWith('media-')) rmSync(resolve(TMP_DIR, entry), { recursive: true, force: true })
+  }
+  const root = resolve(TMP_DIR, `media-${process.pid}`)
+  const dirs = { root, public: resolve(root, 'public'), private: resolve(root, 'private') }
+  mkdirSync(dirs.public, { recursive: true })
+  mkdirSync(dirs.private, { recursive: true })
+  process.env.PUBLIC_MEDIA_DIR = dirs.public
+  process.env.PRIVATE_MEDIA_DIR = dirs.private
+  return dirs
+}
+
 export default async function setup(): Promise<() => Promise<void>> {
   loadTestEnv()
-  // A test server must own the port: refuse to run beside another instance.
+  // A test server must own the port: refuse to run beside another instance (TCP probe; a fetch could be answered by a proxy).
   if (await portInUse(TEST_PORT)) throw new Error(`Port ${TEST_PORT} is already in use. Stop the other server before running integration tests.`)
+  const mediaDir = prepareMediaDirs()
+  mediaRoot = mediaDir.root
 
   // Fresh schema from the committed migrations.
   execFileSync('pnpm', ['exec', 'payload', 'migrate:fresh', '--forceAcceptWarning'], { env: process.env, stdio: 'pipe' })
@@ -102,23 +150,40 @@ export default async function setup(): Promise<() => Promise<void>> {
 
   const fixtures: Fixtures = {
     adminId: admin.id as number, editorId: editor.id as number,
+    mediaDir,
     publicMediaId: publicMedia.id as number, publicMediaFilename: publicMedia.filename ?? 'fixture-public.png',
     unapprovedPublicMediaId: unapprovedMedia.id as number, unapprovedPublicMediaFilename: unapprovedMedia.filename ?? 'fixture-unapproved.png',
     privateMediaId: privateMedia.id as number, privateMediaFilename: privateMedia.filename ?? 'fixture-private.png',
     projects: { publicPublished: publicProject.id as number, unlistedPublished: unlisted, privatePublished: privateProject, draftOnly: draftOnly.id as number },
     serviceId: service.id as number,
   }
-  mkdirSync(resolve(process.cwd(), 'tests/.tmp'), { recursive: true })
-  writeFileSync(resolve(process.cwd(), 'tests/.tmp/fixtures.json'), JSON.stringify(fixtures, null, 2))
+  writeFileSync(resolve(TMP_DIR, 'fixtures.json'), JSON.stringify(fixtures, null, 2))
   await payload.db.destroy?.()
 
-  server = spawn('pnpm', ['exec', 'next', 'start', '-p', String(TEST_PORT)], { env: { ...process.env, NODE_ENV: 'production' }, stdio: ['ignore', 'pipe', 'pipe'] })
+  // The Next binary runs directly, not through `pnpm exec`: `next start` serves in-process, so this child *is* the
+  // server. SIGTERM reaches it with no wrapper in between, and it stays in this process's group, so an abrupt end of
+  // this process (Playwright stops its web server with SIGKILL on the group) takes the server down with it.
+  const nextBin = createRequire(import.meta.url).resolve('next/dist/bin/next')
+  server = spawn(process.execPath, [nextBin, 'start', '-p', String(TEST_PORT)], {
+    // Includes DATABASE_URL (the test database) and the per-run media directories set above.
+    env: { ...process.env, NODE_ENV: 'production' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
   server.stdout?.on('data', () => undefined)
   server.stderr?.on('data', (d) => process.stderr.write(`[next] ${d}`))
-  await waitForServer(`${BASE_URL}/en`)
+  try {
+    await waitForServer(`${BASE_URL}/en`)
+  } catch (err) {
+    await stopServer(server).catch(() => undefined)
+    throw err
+  }
 
   return async () => {
-    server?.kill('SIGTERM')
-    await new Promise((r) => setTimeout(r, 500))
+    if (server) await stopServer(server)
+    server = undefined
+    // Only return once the port is actually free: `pnpm test:e2e` may start the moment this process exits.
+    await waitForPortFree(TEST_PORT, 10_000)
+    if (mediaRoot) rmSync(mediaRoot, { recursive: true, force: true })
+    mediaRoot = undefined
   }
 }
