@@ -14,7 +14,7 @@ export const EDITOR = { email: 'editor.test@example.com', password: 'Editor-Test
  * Points the process at the test database. Refuses to run against DATABASE_URL and requires the
  * word "test" in the database name, because the suite wipes the schema.
  */
-export function useTestEnv(): void {
+export function loadTestEnv(): void {
   const envFile = resolve(process.cwd(), '.env')
   const fromFile = existsSync(envFile) ? parseDotenv(readFileSync(envFile, 'utf8')) : {}
   if (existsSync(envFile)) loadDotenv({ path: envFile, quiet: true })

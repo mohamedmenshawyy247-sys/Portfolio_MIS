@@ -13,7 +13,7 @@ let origin = ''
 test.beforeAll(async () => {
   server = createServer((req, res) => {
     const path = normalize(decodeURIComponent((req.url ?? '/').split('?')[0]!)).replace(/^(\.\.[/\\])+/, '')
-    let file = join(DOCS, path === '/' ? 'index.html' : path)
+    const file = join(DOCS, path === '/' ? 'index.html' : path)
     if (!file.startsWith(DOCS) || !existsSync(file) || statSync(file).isDirectory()) {
       res.statusCode = 404
       return res.end('not found')

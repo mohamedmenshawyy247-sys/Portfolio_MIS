@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { User } from '@/payload-types'
-import { useTestEnv } from './env'
+import { loadTestEnv } from './env'
 import { fixtures, pngBuffer } from './helpers'
 
 const f = fixtures()
@@ -10,7 +10,7 @@ let admin: User
 let editor: User
 
 beforeAll(async () => {
-  useTestEnv()
+  loadTestEnv()
   const { getPayload } = await import('payload')
   const { default: config } = await import('@payload-config')
   payload = await getPayload({ config })

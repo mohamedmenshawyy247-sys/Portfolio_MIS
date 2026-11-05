@@ -3,7 +3,7 @@ import { connect } from 'node:net'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import sharp from 'sharp'
-import { ADMIN, BASE_URL, EDITOR, TEST_PORT, useTestEnv } from './env'
+import { ADMIN, BASE_URL, EDITOR, TEST_PORT, loadTestEnv } from './env'
 
 export type Fixtures = {
   adminId: number
@@ -46,7 +46,7 @@ async function waitForServer(url: string, attempts = 90): Promise<void> {
 }
 
 export default async function setup(): Promise<() => Promise<void>> {
-  useTestEnv()
+  loadTestEnv()
   // A test server must own the port: refuse to run beside another instance.
   if (await portInUse(TEST_PORT)) throw new Error(`Port ${TEST_PORT} is already in use. Stop the other server before running integration tests.`)
 
