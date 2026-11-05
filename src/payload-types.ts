@@ -217,6 +217,9 @@ export interface Project {
   reviewStatus?: ('draft' | 'in-review' | 'changes-requested' | 'approved') | null;
   cover?: (number | null) | PublicMedia;
   publicGallery?: (number | PublicMedia)[] | null;
+  /**
+   * Staff-only media; allowed on private projects only.
+   */
   privateGallery?: (number | PrivateMedia)[] | null;
   /**
    * Staff-only until demo access is approved; never expose internal endpoints publicly.
@@ -238,7 +241,7 @@ export interface PublicMedia {
   alt: string;
   caption?: string | null;
   /**
-   * Editorial approval required before linking publicly.
+   * Unapproved assets are never served to visitors or rendered on public pages.
    */
   approvedForPublic?: boolean | null;
   updatedAt: string;
