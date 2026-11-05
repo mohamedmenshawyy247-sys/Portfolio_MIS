@@ -1,13 +1,24 @@
 'use client'
 import { useId, useMemo, useState } from 'react'
 import Link from 'next/link'
-import type { Locale, PortfolioProject } from '@/lib/catalog'
+import type { Locale, MediaRef } from '@/lib/catalog'
 import { copy } from '@/lib/copy'
 import { CoverImage, StatusBadges } from './SiteShell'
 
 type Filter = { key: string; label: string }
 
-export default function ProjectsClient({ locale, projects, filters }: { filters: Filter[]; locale: Locale; projects: PortfolioProject[] }) {
+/** The subset of a project that the gallery card renders; nothing else reaches the client. */
+export type ProjectCard = {
+  category: string
+  cover: MediaRef | null
+  slug: string
+  status: 'draft' | 'published'
+  summary: string
+  title: string
+  visibility: 'private' | 'public' | 'unlisted'
+}
+
+export default function ProjectsClient({ locale, projects, filters, showBadges = false }: { filters: Filter[]; locale: Locale; projects: ProjectCard[]; showBadges?: boolean }) {
   const c = copy(locale)
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
@@ -34,7 +45,7 @@ export default function ProjectsClient({ locale, projects, filters }: { filters:
             <div className="gallery-thumb"><CoverImage media={p.cover} sizes="(max-width: 860px) 100vw, 33vw" /></div>
             <div className="gallery-content">
               <span className="category-tag">{p.category}</span>
-              <StatusBadges locale={locale} status={p.status} visibility={p.visibility} />
+              {showBadges && <StatusBadges locale={locale} status={p.status} visibility={p.visibility} />}
               <h3>{p.title}</h3><p>{p.summary}</p><span className="text-link">{c.case}</span>
             </div>
           </Link>

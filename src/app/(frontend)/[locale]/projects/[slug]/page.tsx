@@ -36,7 +36,7 @@ export default async function CasePage({ params }: Params) {
       <section className="page-hero">
         <div className="container">
           <div className="eyebrow bright">{c.case} · {p.category}</div>
-          <StatusBadges locale={locale} status={p.status} visibility={p.visibility} />
+          {viewer.draft && <StatusBadges locale={locale} status={p.status} visibility={p.visibility} />}
           <h1>{p.title}</h1>
           <p>{p.summary}</p>
           <Link className="button-outline" href={`/${locale}/projects`}>{c.back}</Link>
