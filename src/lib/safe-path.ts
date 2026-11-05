@@ -8,6 +8,8 @@ export function safeInternalPath(candidate: string | null | undefined): null | s
   if (typeof candidate !== 'string' || candidate.length === 0 || candidate.length > 2048) return null
   if (!/^\/[A-Za-z0-9\-._~!$&'()*+,;=:@%/?#[\]]*$/.test(candidate)) return null
   if (candidate.startsWith('//') || candidate.includes('\\') || /[\u0000-\u001f\u007f]/.test(candidate)) return null
+  // Encoded separators are refused too, so no later decoding step can turn the path into an authority.
+  if (/%(2f|5c)/i.test(candidate)) return null
   let parsed: URL
   try {
     parsed = new URL(candidate, 'http://internal.invalid')

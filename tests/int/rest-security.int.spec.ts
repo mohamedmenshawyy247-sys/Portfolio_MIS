@@ -142,7 +142,8 @@ describe('adversarial review regressions', () => {
       const res = await api(`/exit-preview?path=${encodeURIComponent(bad)}`)
       expect([302, 307]).toContain(res.status)
       const location = res.headers.get('location') ?? ''
-      expect(location, bad).not.toMatch(/evil/)
+      // The property that matters: wherever the browser ends up, it is our own origin.
+      expect(new URL(location, BASE_URL).origin, bad).toBe(new URL(BASE_URL).origin)
       expect(location, bad).toMatch(/^(\/|http:\/\/localhost:3000\/)$/)
     }
     const good = await api(`/exit-preview?path=${encodeURIComponent('/ar/projects?x=1')}`)
