@@ -71,8 +71,9 @@ They refuse to start if something else is listening on port 3000.
   Editors revise a published project by saving a new draft; the live version stays untouched until an
   admin publishes it.
 - **Media:** `public-media` (approved public assets, served at `/api/public-media/file/<name>` and the only
-  path allowed through `next/image`) and `private-media` (staff-only, stored outside `public/`, never
-  referenced from public pages). Uploads are validated by content (magic bytes), size and extension; SVG is
+  path allowed through `next/image`) and `private-media` (staff-only, never referenced from public pages).
+  Both are stored under `uploads/` (git-ignored, overridable with `PUBLIC_MEDIA_DIR` / `PRIVATE_MEDIA_DIR`),
+  deliberately outside Next's `public/` folder, which would serve files with no access check. Uploads are validated by content (magic bytes), size and extension; SVG is
   rejected; images are re-encoded through sharp.
 - **Homepage builder:** a fixed catalogue of seven blocks (hero, introduction, services, featured projects,
   approach, impact, CTA) rendered in order; built-in defaults are used until the global is published.

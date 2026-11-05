@@ -11,7 +11,7 @@ export const PrivateMedia: CollectionConfig = {
   slug: 'private-media',
   labels: { singular: { en: 'Private media', ar: 'وسائط خاصة' }, plural: { en: 'Private media', ar: 'الوسائط الخاصة' } },
   upload: {
-    staticDir: 'private-media',
+    staticDir: process.env.PRIVATE_MEDIA_DIR || 'uploads/private-media',
     mimeTypes: [...Object.keys(IMAGE_UPLOADS), ...Object.keys(VIDEO_UPLOADS)],
     allowRestrictedFileTypes: false,
     resizeOptions: { width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true },

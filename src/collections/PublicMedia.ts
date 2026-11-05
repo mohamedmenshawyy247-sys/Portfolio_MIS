@@ -11,7 +11,10 @@ export const PublicMedia: CollectionConfig = {
   slug: 'public-media',
   labels: { singular: { en: 'Public media', ar: 'وسائط عامة' }, plural: { en: 'Public media', ar: 'الوسائط العامة' } },
   upload: {
-    staticDir: 'public/media',
+    // Outside Next's public/ folder on purpose: files in public/ are served by Next at /media/<name> with
+    // no access check, which would bypass the approval gate. The only route to the bytes is
+    // /api/public-media/file/<name>, which runs this collection's read access.
+    staticDir: process.env.PUBLIC_MEDIA_DIR || 'uploads/public-media',
     mimeTypes: [...Object.keys(IMAGE_UPLOADS), ...Object.keys(VIDEO_UPLOADS)],
     allowRestrictedFileTypes: false,
     // Images are re-encoded through sharp (metadata stripped, dimensions bounded).

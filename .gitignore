@@ -9,12 +9,13 @@ node_modules/
 coverage/
 playwright-report/
 test-results/
-public/media/
 *.pem
 *.key
 
-# Private uploads live outside public/ and are never committed
+# Uploads live outside public/ (never served without an access check) and are never committed
+uploads/
 private-media/
+public/media/
 qa-screenshots/
 .playwright/
 tests/.tmp/
